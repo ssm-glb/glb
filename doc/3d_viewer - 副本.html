@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>3D Model Viewer</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; }
+        canvas { display: block; }
+
+        /* 按钮功能区容器样式 */
+        #button-wrapper {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 101;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px;
+            transition: opacity 0.3s ease;
+        }
+
+        /* 按钮公共样式 (由父容器flex控制布局，这里只设置非定位样式) */
+        #button-wrapper button {
+            padding: 8px 15px;
+            font-size: 14px;
+            cursor: pointer;
+            background-color: #222;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        #button-wrapper button:hover {
+            background-color: #444;
+        }
+
+        /* 隐藏功能区 (初始和鼠标移出时) */
+        .buttons-hidden {
+            opacity: 0;
+        }
+
+        /* 显示功能区 (鼠标移入时) */
+        .buttons-visible {
+            opacity: 1;
+        }
+
+        #error-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: red;
+            font-size: 16px;
+            display: none;
+            z-index: 101;
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        /* 加载进度条样式 */
+        #loading-bar-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            height: 20px;
+            background-color: #f3f3f3;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            overflow: hidden;
+            display: none; /* 默认隐藏 */
+            z-index: 102;
+        }
+
+        #loading-bar {
+            height: 100%;
+            width: 0%;
+            background-color: #4CAF50;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+            border-radius: 3px;
+        }
+
+        #loading-percentage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #333;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        /* 顶牌样式 */
+        .model-card {
+            position: absolute;
+            background: linear-gradient(135deg, rgba(20, 30, 48, 0.95) 0%, rgba(36, 59, 85, 0.95) 100%);
+            border: 1px solid rgba(0, 195, 255, 0.6);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 11px;
+            color: #ffffff;
+            text-align: center;
+            pointer-events: none;
+            white-space: nowrap;
+            transform: translate(-50%, -100%);
+            z-index: 99;
+            display: none;
+            box-shadow: 0 4px 15px rgba(0, 195, 255, 0.3), 0 2px 8px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+
+        .model-card::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: -1px;
+            right: -1px;
+            bottom: -1px;
+            background: linear-gradient(45deg, rgba(0, 195, 255, 0.8), rgba(0, 255, 200, 0.4), rgba(0, 195, 255, 0.8));
+            border-radius: 8px;
+            z-index: -1;
+            opacity: 0.7;
+            animation: borderGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes borderGlow {
+            0% {
+                opacity: 0.5;
+            }
+            100% {
+                opacity: 0.8;
+            }
+        }
+
+        .model-card strong {
+            color: #00c3ff;
+            font-weight: 600;
+            text-shadow: 0 0 8px rgba(0, 195, 255, 0.6);
+            display: block;
+            margin-bottom: 4px;
+            font-size: 12px;
+        }
+
+        /* 顶牌中低透明度文本样式 */
+        .low-opacity-text {
+            opacity: 0.8;
+            color: #b0c4de;
+            font-size: 10px;
+        }
+        
+        /* 启用漫游按钮的独立样式 */
+        #toggleWalkthroughBtn {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 15px;
+            font-size: 14px;
+            cursor: pointer;
+            z-index: 101;
+            background-color: #222;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        #toggleWalkthroughBtn:hover {
+            background-color: #444;
+        }
+
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, transparent 80%, rgba(0, 0, 0, 1) 100%);
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        #viewcube-container {
+            width: 80px;
+            height: 80px;
+            user-select: none;
+        }
+        .viewcube {
+            width: 100%;
+            height: 100%;
+            perspective: 400px;
+            position: relative;
+            cursor: pointer;
+        }
+        .viewcube-face {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: rgba(30, 60, 120, 0.95);
+            color: #fff;
+            font-weight: bold;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #00c3ff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,195,255,0.2);
+            transition: background 0.2s;
+            opacity: 0.95;
+        }
+        .viewcube-face:hover {
+            background: #00c3ff;
+            color: #fff;
+            opacity: 1;
+        }
+        .viewcube-face-top { transform: rotateX(90deg) translateZ(30px); }
+        .viewcube-face-bottom { transform: rotateX(-90deg) translateZ(30px); }
+        .viewcube-face-front { transform: translateZ(30px); }
+        .viewcube-face-back { transform: rotateY(180deg) translateZ(30px); }
+        .viewcube-face-left { transform: rotateY(-90deg) translateZ(30px); }
+        .viewcube-face-right { transform: rotateY(90deg) translateZ(30px); }
+    </style>
+</head>
+<body>
+    <!-- 1. Three.js及模型加载相关脚本优先加载 -->
+    <script src="https://ssm-smart.github.io/axure/three/three.min.js"></script>
+    <script src="https://ssm-smart.github.io/axure/three/GLTFLoader.js"></script>
+    <script src="https://ssm-smart.github.io/axure/three/DRACOLoader.js"></script>
+    <script src="https://ssm-smart.github.io/axure/three/OrbitControls.js"></script>
+    <script src="https://ssm-smart.github.io/axure/three/PointerLockControls.js"></script>
+    <script src="https://ssm-smart.github.io/axure/three/EffectComposer.js"></script>
+    <script src="https://ssm-smart.github.io/axure/three/RenderPass.js"></script>
+    <script src="https://ssm-smart.github.io/axure/three/OutlinePass.js"></script>
+    <script src="https://ssm-smart.github.io/axure/three/ShaderPass.js"></script>
+    <script src="https://ssm-smart.github.io/axure/three/CopyShader.js"></script>
+    <script src="https://ssm-smart.github.io/axure/three/FXAAAShader.js"></script>
+    <script src="https://ssm-smart.github.io/axure/three/tween.umd.min.js"></script>
+    <script src="https://ssm-smart.github.io/axure/three/jquery.min.js"></script>
+    <!-- Draco 解码器CDN路径 -->
+    <script src="https://ssm-smart.github.io/axure/three/draco_decoder.js"></script>
+
+    <!-- 2. loading指示器保留在前面 -->
+    <div id="loading-indicator">
+        <div class="spinner"></div>
+        <div id="loading-percentage">0%</div>
+    </div>
+    <div id="error-message"></div>
+    <div id="overlay"></div>
+
+    <!-- 3. Three.js主逻辑脚本（init、loadModel等） -->
+    <script>
+    let scene, camera, renderer, controls;
+    let composer;
+    let outlinePass;
+
+    let modelUrl = '';
+    let currentModel = null;
+    let modelCardsData = {};
+    let modelGroundY = 0;
+    let modelSprites = new Map();
+    // 顶牌缩放比例，默认0.002，可通过URL参数cardScale传入
+    let cardScaleFactor = 0.002;
+    (function(){
+        const params = new URLSearchParams(window.location.search);
+        const scale = parseFloat(params.get('cardScale'));
+        if(!isNaN(scale) && scale > 0) cardScaleFactor = scale;
+    })();
+
+    let selectedObject = null;
+    let isDraggingMouse = false;
+    let mouseDownPosition = new THREE.Vector2();
+    let prevTime = performance.now();
+
+    let pointerLockControls;
+    let isWalkthroughMode = false;
+    const moveSpeed = 0.05;
+    const velocity = new THREE.Vector3();
+    const direction = new THREE.Vector3();
+    let moveForward = false;
+    let moveBackward = false;
+    let moveLeft = false;
+    let moveRight = false;
+
+    let placementCube;
+    let isPlacementMode = false;
+    const placementRaycaster = new THREE.Raycaster();
+    const placementPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    let placementIntersection = new THREE.Vector3();
+
+    let mixer;
+    let animations = [];
+
+    // 2D/3D切换功能
+    let isTopView = false;
+    let lastCameraPos = null;
+    let lastCameraTarget = null;
+
+    function validateThreeJS() {
+        if (typeof THREE === 'undefined' || !THREE.Scene || !THREE.PerspectiveCamera) {
+            showError('3D渲染库加载失败。请检查网络连接或脚本路径。');
+            return false;
+        }
+        return true;
+    }
+
+    function createCardTexture(cardText) {
+        let lines = cardText.split(/\n|<br>|<br\s*\/?>/i).map(line => line.trim());
+        if (lines.length === 0) lines = [cardText];
+
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        let maxWidth = 0;
+        const lineHeight = 26;
+        lines.forEach((line, idx) => {
+            tempCtx.font = idx === 0 ? 'bold 18px Segoe UI, Tahoma, Geneva, Verdana, sans-serif' : '14px Segoe UI, Tahoma, Geneva, Verdana, sans-serif';
+            maxWidth = Math.max(maxWidth, tempCtx.measureText(line).width);
+        });
+
+        const paddingX = 24, paddingY = 16;
+        const canvasWidth = Math.ceil(maxWidth + paddingX * 2);
+        const canvasHeight = lineHeight * lines.length + paddingY * 2;
+        const canvas = document.createElement('canvas');
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        const ctx = canvas.getContext('2d');
+
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, 'rgba(20, 30, 48, 0.95)');
+        gradient.addColorStop(1, 'rgba(36, 59, 85, 0.95)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = 'rgba(0, 195, 255, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
+
+        let y = paddingY + lineHeight;
+        lines.forEach((line, idx) => {
+            ctx.font = idx === 0 ? 'bold 18px Segoe UI, Tahoma, Geneva, Verdana, sans-serif' : '14px Segoe UI, Tahoma, Geneva, Verdana, sans-serif';
+            ctx.fillStyle = idx === 0 ? '#00c3ff' : '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.fillText(line, canvas.width / 2, y);
+            y += lineHeight;
+        });
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+        return { texture, width: canvas.width, height: canvas.height };
+    }
+
+    function init() {
+        if (!validateThreeJS()) return;
+
+        setupScene();
+        setupCamera();
+        setupRenderer();
+        setupLightsAndHelpers();
+
+        setupControls();
+        setupPointerLockControls();
+        setupPlacementCube();
+        setupPostProcessing();
+        setupMouseListeners();
+        setupEventListeners();
+
+        animate();
+    }
+
+    function setupScene() {
+        scene = new THREE.Scene();
+    }
+
+    function setupCamera() {
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+        const initialCameraPos = getCameraPositionFromQueryString();
+        camera.position.copy(initialCameraPos || new THREE.Vector3(2, 2, 2));
+    }
+
+    function setupRenderer() {
+        renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+    }
+
+    function setupLightsAndHelpers() {
+        const params = new URLSearchParams(window.location.search);
+        let ambientLightIntensity = Number(params.get('ambientLightIntensity')) || 1;
+        let sunLightIntensity = Number(params.get('sunLightIntensity')) || 0;
+        let directionalLightIntensity = Number(params.get('directionalLightIntensity')) || 1;
+        let directionalLightAngle = Number(params.get('directionalLightAngle')) || 180;
+
+        ambientLight = new THREE.AmbientLight(0xfffbe6, ambientLightIntensity);
+        scene.add(ambientLight);
+
+        directionalLight = new THREE.DirectionalLight(0xffffff, directionalLightIntensity);
+        directionalLight.position.set(1, 1, 1).normalize();
+        scene.add(directionalLight);
+
+        directionalLight.castShadow = true;
+        directionalLight.shadow.radius = (directionalLightAngle / 180) * 10;
+        directionalLight.shadow.bias = -0.0001;
+
+        sunLight = new THREE.DirectionalLight(0xfff2cc, sunLightIntensity);
+        sunLight.position.set(10, 20, 10);
+        scene.add(sunLight);
+
+        updateLightInfo();
+    }
+
+    function updateLightInfo() {
+        const ambientSpan = document.getElementById('ambient-intensity');
+        const sunSpan = document.getElementById('sun-intensity');
+        if (ambientSpan && typeof ambientLight !== 'undefined' && ambientLight) {
+            ambientSpan.textContent = ambientLight.intensity.toFixed(2);
+        }
+        if (sunSpan && typeof sunLight !== 'undefined' && sunLight) {
+            sunSpan.textContent = sunLight.intensity.toFixed(2);
+        }
+    }
+
+    function setupControls() {
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.screenSpacePanning = false;
+    }
+
+    function setupPointerLockControls() {
+        pointerLockControls = new THREE.PointerLockControls(camera, document.body);
+        pointerLockControls.enabled = false;
+    }
+
+    function setupPlacementCube() {
+        const geometry = new THREE.BoxGeometry(0.08, 0.4, 0.08);
+        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.5 });
+        placementCube = new THREE.Mesh(geometry, material);
+        placementCube.visible = false;
+    }
+
+    function setupPostProcessing() {
+        composer = new THREE.EffectComposer(renderer);
+
+        const renderPass = new THREE.RenderPass(scene, camera);
+        composer.addPass(renderPass);
+
+        outlinePass = new THREE.OutlinePass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            scene,
+            camera
+        );
+        outlinePass.edgeStrength = 3;
+        outlinePass.edgeGlow = 0.5;
+        outlinePass.edgeThickness = 1;
+        outlinePass.visibleEdgeColor.set('#ffffff');
+        outlinePass.hiddenEdgeColor.set('#190a05');
+        composer.addPass(outlinePass);
+    }
+
+    function setupMouseListeners() {
+        renderer.domElement.addEventListener('click', onMouseClick);
+        renderer.domElement.addEventListener('dblclick', onMouseDoubleClick);
+        renderer.domElement.addEventListener('mousedown', onMouseDown);
+        renderer.domElement.addEventListener('mouseup', onMouseUp);
+    }
+
+    function setupButtonListeners() {
+        const buttonWrapper = document.getElementById('button-wrapper');
+        const lightInfo = document.getElementById('light-info');
+        if (buttonWrapper) {
+            buttonWrapper.classList.add('buttons-hidden');
+
+            buttonWrapper.addEventListener('mouseenter', () => {
+                buttonWrapper.classList.remove('buttons-hidden');
+                buttonWrapper.classList.add('buttons-visible');
+                if (lightInfo) lightInfo.style.display = 'inline-block';
+            });
+
+            buttonWrapper.addEventListener('mouseleave', () => {
+                setTimeout(() => {
+                    if (!buttonWrapper.matches(':hover')) {
+                        buttonWrapper.classList.remove('buttons-visible');
+                        buttonWrapper.classList.add('buttons-hidden');
+                        if (lightInfo) lightInfo.style.display = 'none';
+                    }
+                }, 100);
+            });
+
+            document.getElementById('copyCameraPosBtn').addEventListener('click', copyCameraPositionToClipboard);
+            document.getElementById('screenshotBtn').addEventListener('click', takeScreenshot);
+            document.getElementById('copyModelListBtn').addEventListener('click', copyModelListToClipboard);
+            document.getElementById('copyAnimationListBtn').addEventListener('click', copyAnimationListToClipboard);
+        }
+
+        document.getElementById('toggleWalkthroughBtn').addEventListener('click', () => {
+            toggleWalkthroughMode(!isWalkthroughMode);
+        });
+    }
+
+    function setupEventListeners() {
+        window.addEventListener('resize', onWindowResize, false);
+        document.addEventListener('pointerlockchange', onPointerLockChange, false);
+        setupButtonListeners();
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        composer.setSize(window.innerWidth, window.innerHeight);
+        if (controls) controls.update();
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        if (controls) controls.update();
+        if (mixer) mixer.update(0.016);
+        TWEEN.update();
+        composer.render();
+
+        if (isWalkthroughMode) {
+            const time = performance.now();
+            const delta = (time - prevTime) / 1000;
+            handleWalkthroughMovement(delta);
+        }
+
+        prevTime = performance.now();
+    }
+
+    function handleWalkthroughMovement(delta) {
+        const actualMoveSpeed = moveSpeed * 50.0 * delta;
+
+        if (moveForward) pointerLockControls.moveForward(actualMoveSpeed);
+        if (moveBackward) pointerLockControls.moveForward(-actualMoveSpeed);
+        if (moveLeft) pointerLockControls.moveRight(-actualMoveSpeed);
+        if (moveRight) pointerLockControls.moveRight(actualMoveSpeed);
+
+        if (placementCube.visible) {
+            const cameraDirection = new THREE.Vector3();
+            camera.getWorldDirection(cameraDirection);
+            placementCube.position.copy(camera.position).add(cameraDirection.multiplyScalar(0.5));
+            placementCube.position.y = modelGroundY + (placementCube.geometry.parameters.height / 2);
+        }
+    }
+
+    function loadModel(url) {
+        if (!url) {
+            showError('请提供模型URL');
+            return;
+        }
+
+        modelUrl = url;
+        hideError();
+
+        showLoadingProgress(0);
+
+        disposeCurrentModel();
+
+        const dracoLoader = setupDracoLoader();
+        if (!dracoLoader) return;
+
+        const loader = new THREE.GLTFLoader();
+        loader.setCrossOrigin('anonymous');
+        loader.setDRACOLoader(dracoLoader);
+
+        loader.load(url, function (gltf) {
+            currentModel = gltf.scene;
+            scene.add(currentModel);
+
+            animations = gltf.animations;
+            if (animations && animations.length > 0) {
+                mixer = new THREE.AnimationMixer(currentModel);
+            }
+
+            hideLoadingProgress();
+
+            autoPositionCameraAndControls(currentModel);
+
+            // 1. 先只渲染模型，不初始化后处理和顶牌
+            renderer.render(scene, camera);
+
+            // 2. 异步初始化后处理和顶牌
+            setTimeout(() => {
+                if (!composer) setupPostProcessing();
+                updateModelSprites();
+            }, 0);
+
+            window.parent.postMessage({command:'modelLoaded'}, '*');
+
+            // 模型加载完成后再显示功能区和按钮
+            document.getElementById('button-hover-area').style.display = '';
+            document.getElementById('button-wrapper').style.display = 'flex';
+            document.getElementById('toggle2D3DBtn').style.display = '';
+
+        }, function (xhr) {
+            if (xhr.lengthComputable) {
+                const percentComplete = xhr.loaded / xhr.total * 100;
+                showLoadingProgress(percentComplete);
+            }
+        }, function (error) {
+            console.error('An error occurred while loading the model:', error); 
+            showError('模型加载失败: ' + (error.message || '未知错误'));
+            hideLoadingProgress();
+        });
+    }
+
+    function showLoadingProgress(percentage) {
+        const loadingBarContainer = document.getElementById('loading-bar-container');
+        const loadingBar = document.getElementById('loading-bar');
+        const loadingPercentage = document.getElementById('loading-percentage');
+        if (loadingBarContainer && loadingBar && loadingPercentage) {
+            loadingBarContainer.style.display = 'block';
+            loadingBar.style.width = percentage.toFixed(0) + '%';
+            loadingPercentage.textContent = percentage.toFixed(0) + '%';
+        }
+    }
+
+    function hideLoadingProgress() {
+        const loadingBarContainer = document.getElementById('loading-bar-container');
+        const loadingPercentage = document.getElementById('loading-percentage');
+        if (loadingBarContainer) loadingBarContainer.style.display = 'none';
+        if (loadingPercentage) loadingPercentage.style.display = 'none';
+    }
+
+    function disposeCurrentModel() {
+        if (currentModel) {
+            scene.remove(currentModel);
+            currentModel.traverse(child => {
+                if (child.isMesh) {
+                    if (child.geometry) child.geometry.dispose();
+                    if (child.material) {
+                        if (Array.isArray(child.material)) {
+                            child.material.forEach(material => material.dispose());
+                        } else {
+                            child.material.dispose();
+                        }
+                    }
+                }
+            });
+            currentModel = null;
+        }
+
+        modelSprites.forEach(sprite => {
+            scene.remove(sprite);
+            if (sprite.material.map) {
+                sprite.material.map.dispose();
+            }
+            sprite.material.dispose();
+        });
+        modelSprites.clear();
+    }
+
+    function setupDracoLoader() {
+        if (!THREE.DRACOLoader || !window.DracoDecoderModule) {
+             showError('Draco 解码器未安装');
+             console.error('DRACOLoader or DracoDecoderModule is not available.');
+             return null;
+        }
+        const dracoLoader = new THREE.DRACOLoader();
+        dracoLoader.setDecoderPath('https://ssm-smart.github.io/axure/three/');
+        if (typeof WebAssembly === 'object' && dracoLoader.setDecoderConfig) {
+            dracoLoader.setDecoderConfig({ type: 'wasm' });
+        } else {
+        dracoLoader.setDecoderConfig({ type: 'js' });
+        }
+        return dracoLoader;
+    }
+
+    function autoPositionCameraAndControls(model) {
+            if (!getCameraPositionFromQueryString()) {
+            const box = new THREE.Box3().setFromObject(model);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+
+            modelGroundY = box.min.y;
+            placementPlane.constant = -modelGroundY;
+
+                const maxDim = Math.max(size.x, size.y, size.z);
+            let cameraDistance = Math.abs(maxDim / (2 * Math.tan(camera.fov * (Math.PI / 180) / 2))) * 1.3;
+
+            const targetCameraPosition = new THREE.Vector3(
+                center.x - cameraDistance * 1.0,
+                center.y + cameraDistance * 0.8,
+                center.z + cameraDistance * 1.5 
+            );
+
+            new TWEEN.Tween(camera.position)
+                .to(targetCameraPosition, 1000)
+                .easing(TWEEN.Easing.Quadratic.Out)
+                .start();
+
+            new TWEEN.Tween(controls.target)
+                .to(center, 1000)
+                .easing(TWEEN.Easing.Quadratic.Out)
+                .onUpdate(() => controls.update())
+                .start();
+
+             } else {
+                 const box = new THREE.Box3().setFromObject(model);
+                 const center = box.getCenter(new THREE.Vector3());
+                 if (controls) {
+                     controls.target.copy(center);
+                     controls.update();
+                 }
+             }
+    }
+
+    function showError(message) {
+        const errorDiv = document.getElementById('error-message');
+        if (errorDiv) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+    }
+
+    function hideError() {
+         const errorDiv = document.getElementById('error-message');
+         if (errorDiv) {
+             errorDiv.style.display = 'none';
+         }
+    }
+
+    function sendCameraPositionToAxure() {
+        if (camera) {
+            const pos = camera.position;
+            window.parent.postMessage({
+                command: 'cameraPositionUpdate',
+                position: {
+                    x: pos.x,
+                    y: pos.y,
+                    z: pos.z
+                }
+            }, '*');
+        }
+    }
+
+    function copyCameraPositionToClipboard() {
+        if (camera) {
+            const pos = camera.position;
+            const posString = `${pos.x}\n${pos.y}\n${pos.z}`;
+            copyToClipboard(posString, 'copyCameraPosBtn', '已复制!');
+        } else {
+             showError('相机对象未准备好');
+        }
+    }
+
+    function copyModelListToClipboard() {
+        if (!currentModel) {
+            showError('没有加载模型，无法复制列表');398404
+            return;
+        }
+
+        const modelNames = [];
+        currentModel.traverse((object) => {
+            if (object.name && object.name !== '') {
+                modelNames.push(object.name);
+            }
+        });
+
+        if (modelNames.length === 0) {
+            showError('模型中没有命名的对象');
+            return;
+        }
+
+        const listString = modelNames.join('\n');
+
+        copyToClipboard(listString, 'copyModelListBtn', '列表已复制!');
+    }
+
+    function copyAnimationListToClipboard() {
+        if (!animations || animations.length === 0) {
+            showError('没有动画可复制');
+            return;
+        }
+        const animationNames = animations.map(a => a.name).filter(name => name && name !== '');
+        if (animationNames.length === 0) {
+            showError('动画名称为空');
+            return;
+        }
+        const listString = animationNames.join('\n');
+        copyToClipboard(listString, 'copyAnimationListBtn', '已复制!');
+    }
+
+    function copyToClipboard(text, buttonId, successMessage) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text)
+                .then(() => fallbackCopyTextToClipboard(text, buttonId, successMessage))
+                .catch(() => fallbackCopyTextToClipboard(text, buttonId, successMessage));
+        } else {
+            fallbackCopyTextToClipboard(text, buttonId, successMessage);
+        }
+    }
+
+    function fallbackCopyTextToClipboard(text, buttonId, successMessage) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.top = "0";
+        textArea.style.left = "0";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                showCopyFeedback(buttonId, successMessage);
+            } else {
+                showError('复制失败');
+            }
+        } catch (err) {
+            console.error('Fallback: Oops, unable to copy', err); 
+            showError('复制失败');
+        }
+
+        document.body.removeChild(textArea);
+    }
+
+    function showCopyFeedback(buttonId, message) {
+         const button = document.getElementById(buttonId);
+         if (button) {
+             const originalText = button.textContent;
+             button.textContent = message;
+             setTimeout(() => {
+                 button.textContent = originalText;
+             }, 2000);
+         }
+    }
+
+    function takeScreenshot() {
+        if (renderer) {
+            renderer.render(scene, camera);
+
+            const canvas = renderer.domElement;
+            const dataURL = canvas.toDataURL('image/png');
+
+            const link = document.createElement('a');
+            link.href = dataURL;
+            link.download = '3d_screenshot.png';
+
+            link.click();
+            link.remove();
+
+        } else {
+            showError('渲染器未准备好，无法截图');
+        }
+    }
+
+    function onMouseDown(event) {
+        mouseDownPosition.x = event.clientX;
+        mouseDownPosition.y = event.clientY;
+        isDraggingMouse = false;
+    }
+
+    function onMouseUp(event) {
+        const deltaX = Math.abs(event.clientX - mouseDownPosition.x);
+        const deltaY = Math.abs(event.clientY - mouseDownPosition.y);
+        const dragThreshold = 5;
+
+        if (deltaX > dragThreshold || deltaY > dragThreshold) {
+            isDraggingMouse = true;
+        }
+    }
+
+    function onMouseClick(event) {
+        if (isDraggingMouse) {
+            isDraggingMouse = false;
+            return;
+        }
+
+        const mouse = new THREE.Vector2();
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouse, camera);
+
+        if (currentModel) {
+            const intersects = raycaster.intersectObject(currentModel, true);
+            
+            if (intersects.length > 0) {
+                selectedObject = intersects[0].object;
+                outlinePass.selectedObjects = [selectedObject];
+
+                const box = new THREE.Box3().setFromObject(selectedObject);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const fov = camera.fov * (Math.PI / 180);
+                let cameraDistance = Math.abs(maxDim / (2 * Math.tan(fov / 2))) * 1.3;
+                const targetCameraPosition = new THREE.Vector3(
+                    center.x,
+                    center.y + cameraDistance * 0.7,
+                    center.z + cameraDistance * 1.2 
+                );
+                new TWEEN.Tween(camera.position)
+                    .to(targetCameraPosition, 800)
+                    .easing(TWEEN.Easing.Quadratic.Out)
+                    .onUpdate(() => controls.update())
+                    .start();
+                new TWEEN.Tween(controls.target)
+                    .to(center, 800)
+                    .easing(TWEEN.Easing.Quadratic.Out)
+                    .onUpdate(() => controls.update())
+                    .start();
+                } else {
+                selectedObject = null;
+                outlinePass.selectedObjects = [];
+            }
+        }
+    }
+
+    function onMouseDoubleClick(event) {
+        const mouse = new THREE.Vector2();
+        mouse.x = (event.x / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.y / window.innerHeight) * 2 + 1;
+
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouse, camera);
+
+        if (currentModel) {
+            const intersects = raycaster.intersectObject(currentModel, true);
+
+            if (intersects.length > 0) {
+                const clickedObject = intersects[0].object;
+
+                window.parent.postMessage({
+                    command: 'modelSelected',
+                    modelName: clickedObject.name
+                }, '*');
+
+                const box = new THREE.Box3().setFromObject(clickedObject);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const fov = camera.fov * (Math.PI / 180);
+                let cameraDistance = Math.abs(maxDim / (2 * Math.tan(fov / 2))) * 1.3;
+
+                const targetCameraPosition = new THREE.Vector3(
+                    center.x,
+                    center.y + cameraDistance * 0.7,
+                    center.z + cameraDistance * 1.2 
+                );
+
+                new TWEEN.Tween(camera.position)
+                    .to(targetCameraPosition, 800)
+                    .easing(TWEEN.Easing.Quadratic.Out)
+                    .onUpdate(() => controls.update())
+                    .start();
+
+                new TWEEN.Tween(controls.target)
+                    .to(center, 800)
+                    .easing(TWEEN.Easing.Quadratic.Out)
+                    .onUpdate(() => controls.update())
+                    .start();
+            }
+        }
+    }
+
+    function updateModelSprites() {
+        if (!currentModel) {
+            modelSprites.forEach(sprite => {
+                scene.remove(sprite);
+            });
+            modelSprites.clear();
+            return;
+        }
+
+        const objectsWithCards = new Set();
+
+        currentModel.traverse((object) => {
+            if (object.name && object.name !== '' && (object.isMesh || object.isGroup || object.isObject3D) && (object.name in modelCardsData)) {
+                let sprite = modelSprites.get(object.name);
+                let cardText = modelCardsData[object.name];
+
+                if (!sprite) {
+                    const { texture, width, height } = createCardTexture(cardText);
+                    const material = new THREE.SpriteMaterial({ 
+                        map: texture,
+                        transparent: true,
+                        opacity: 0.9
+                    });
+                    sprite = new THREE.Sprite(material);
+                    sprite.scale.set(width * cardScaleFactor, height * cardScaleFactor, 1);
+                    modelSprites.set(object.name, sprite);
+                    scene.add(sprite);
+                }
+
+                const box = new THREE.Box3().setFromObject(object);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                
+                sprite.position.copy(center);
+                sprite.position.y += size.y * 1.0;
+                
+                objectsWithCards.add(object.name);
+            }
+        });
+
+        for (const [modelName, sprite] of modelSprites.entries()) {
+            if (!objectsWithCards.has(modelName)) {
+                scene.remove(sprite);
+                if (sprite.material.map) {
+                    sprite.material.map.dispose();
+                }
+                sprite.material.dispose();
+                modelSprites.delete(modelName);
+            }
+        }
+    }
+
+    function toggleWalkthroughMode(enable) {
+        if (enable && !isWalkthroughMode) {
+            isWalkthroughMode = true;
+
+            controls.enabled = false;
+
+            isPlacementMode = true;
+            placementCube.visible = true;
+            scene.add(placementCube);
+
+            const cameraDirection = new THREE.Vector3(); 
+            camera.getWorldDirection(cameraDirection);
+            const initialPosForRay = camera.position.clone().add(cameraDirection.multiplyScalar(5)); 
+
+            placementRaycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+            if (placementRaycaster.ray.intersectPlane(placementPlane, placementIntersection)) {
+                placementCube.position.copy(placementIntersection);
+                placementCube.position.y = modelGroundY + (placementCube.geometry.parameters.height / 2);
+            } else {
+                const currentCameraDirection = new THREE.Vector3();
+                camera.getWorldDirection(currentCameraDirection);
+                const defaultPlacementPos = camera.position.clone().add(currentCameraDirection.multiplyScalar(5));
+                placementCube.position.copy(defaultPlacementPos);
+                placementCube.position.y = modelGroundY + (placementCube.geometry.parameters.height / 2);
+            }
+
+            renderer.domElement.addEventListener('mousemove', onPlacementMouseMove);
+            setTimeout(() => {
+                renderer.domElement.addEventListener('click', onPlacementClick);
+            }, 0);
+
+            const toggleWalkthroughBtn = document.getElementById('toggleWalkthroughBtn');
+            if (toggleWalkthroughBtn) toggleWalkthroughBtn.textContent = '点击选择漫游起点';
+
+        } else if (!enable && isWalkthroughMode) {
+            isWalkthroughMode = false;
+
+            isPlacementMode = false;
+            if (placementCube) {
+                placementCube.visible = false;
+                scene.remove(placementCube);
+            }
+
+            renderer.domElement.removeEventListener('mousemove', onPlacementMouseMove);
+            renderer.domElement.removeEventListener('click', onPlacementClick);
+
+            document.removeEventListener('keydown', onKeyDown);
+            document.removeEventListener('keyup', onKeyUp);
+
+            document.exitPointerLock();
+
+            if (pointerLockControls) {
+                pointerLockControls.enabled = false;
+                pointerLockControls.disconnect();
+                if (scene.children.includes(pointerLockControls.getObject())) {
+                    scene.remove(pointerLockControls.getObject());
+                }
+            }
+
+            if (controls) {
+                controls.enabled = true;
+            }
+
+            const toggleWalkthroughBtn = document.getElementById('toggleWalkthroughBtn');
+            if (toggleWalkthroughBtn) toggleWalkthroughBtn.textContent = '启用漫游';
+        }
+    }
+
+    function onPointerLockChange() {
+        if (document.pointerLockElement === null) {
+            if (isWalkthroughMode) {
+                toggleWalkthroughMode(false);
+            }
+        }
+    }
+
+    function onPlacementMouseMove(event) {
+        if (!isPlacementMode || !placementCube) return;
+
+        const mouse = new THREE.Vector2();
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        placementRaycaster.setFromCamera(mouse, camera);
+
+        if (placementRaycaster.ray.intersectPlane(placementPlane, placementIntersection)) {
+            placementCube.position.copy(placementIntersection);
+            placementCube.position.y = modelGroundY + (placementCube.geometry.parameters.height / 2);
+        } else {
+            const currentCameraDirection = new THREE.Vector3();
+            camera.getWorldDirection(currentCameraDirection);
+            const defaultPlacementPos = camera.position.clone().add(currentCameraDirection.multiplyScalar(5));
+            placementCube.position.copy(defaultPlacementPos);
+            placementCube.position.y = modelGroundY + (placementCube.geometry.parameters.height / 2);
+        }
+    }
+
+    function onPlacementClick(event) {
+        if (isPlacementMode && placementCube.visible) {
+            camera.position.x = placementCube.position.x;
+            camera.position.z = placementCube.position.z;
+            camera.position.y = modelGroundY + 0.5;
+
+            isPlacementMode = false;
+
+            renderer.domElement.removeEventListener('mousemove', onPlacementMouseMove);
+            renderer.domElement.removeEventListener('click', onPlacementClick);
+
+            scene.add(pointerLockControls.getObject());
+            pointerLockControls.enabled = true;
+            document.body.requestPointerLock();
+
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+
+            const toggleWalkthroughBtn = document.getElementById('toggleWalkthroughBtn');
+            if (toggleWalkthroughBtn) toggleWalkthroughBtn.textContent = '禁用漫游';
+        }
+    }
+
+    function onKeyDown(event) {
+        switch (event.code) {
+            case 'KeyW':
+            case 'ArrowUp':
+                moveForward = true;
+                break;
+            case 'KeyA':
+            case 'ArrowLeft':
+                moveLeft = true;
+                break;
+            case 'KeyS':
+            case 'ArrowDown':
+                moveBackward = true;
+                break;
+            case 'KeyD':
+            case 'ArrowRight':
+                moveRight = true;
+                break;
+        }
+    }
+
+    function onKeyUp(event) {
+        switch (event.code) {
+            case 'KeyW':
+            case 'ArrowUp':
+                moveForward = false;
+                break;
+            case 'KeyA':
+            case 'ArrowLeft':
+                moveLeft = false;
+                break;
+            case 'KeyS':
+            case 'ArrowDown':
+                moveBackward = false;
+                break;
+            case 'KeyD':
+            case 'ArrowRight':
+                moveRight = false;
+                break;
+        }
+    }
+
+    function getModelUrlFromQueryString() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('modelUrl');
+    }
+
+    function getCameraPositionFromQueryString() {
+         const params = new URLSearchParams(window.location.search);
+         const posX = params.get('posX');
+         const posY = params.get('posY');
+         const posZ = params.get('posZ');
+
+         if (posX !== null && posY !== null && posZ !== null) {
+              return { x: parseFloat(posX), y: parseFloat(posY), z: parseFloat(posZ) };
+         } else {
+              return null; 
+         }
+    }
+
+    setTimeout(function() {
+    init();
+
+    const initialModelUrl = getModelUrlFromQueryString();
+    if (initialModelUrl) {
+        loadModel(initialModelUrl);
+    } else {
+            console.warn('No initial modelUrl provided in the URL. Please provide it as a query parameter.');
+            showError('请在URL中添加modelUrl参数，例如: ?modelUrl=your_model.glb');
+        }
+    }, 100);
+
+    window.addEventListener('message', function(e){
+        if (!e.data || !e.data.command) return;
+        if (e.data.command === 'showLoading') {
+            showLoadingProgress(0);
+        } else if (e.data.command === 'hideLoading') {
+            hideLoadingProgress();
+        } else if (e.data.command === 'playAnimation') {
+            if (e.data.name === 'ALL') {
+                playAllAnimations();
+            } else if (Array.isArray(e.data.name)) {
+                playAnimationsByNames(e.data.name);
+            } else {
+                playAnimationByName(e.data.name);
+            }
+        } else if (e.data.command === 'stopAllAnimations') {
+            if (mixer) mixer.stopAllAction();
+        } else if (e.data.command === 'stopAnimations') {
+            if (Array.isArray(e.data.name)) {
+                stopAnimationsByNames(e.data.name);
+            } else if (typeof e.data.name === 'string') {
+                stopAnimationsByNames([e.data.name]);
+            }
+        } else if (e.data.command === 'setModelCards') {
+            if (e.data.cards && Array.isArray(e.data.cards)) {
+                modelCardsData = {};
+                e.data.cards.forEach(function(card) {
+                    if (card.modelName && card.cardText) {
+                        modelCardsData[card.modelName] = card.cardText;
+                    }
+                });
+                updateModelSprites();
+                window._modelCardsData = modelCardsData; // 将变量挂到 window 方便全局调试
+            }
+        }
+    });
+
+    function playAnimationByName(name) {
+        if (!mixer || !animations) return;
+        const clip = THREE.AnimationClip.findByName(animations, name);
+        if (clip) {
+            mixer.stopAllAction();
+            const action = mixer.clipAction(clip);
+            action.reset();
+            action.play();
+        }
+    }
+
+    function playAnimationsByNames(names) {
+        if (!mixer || !animations) return;
+        names.forEach(function(name) {
+            const clip = THREE.AnimationClip.findByName(animations, name);
+            if (clip) {
+                const action = mixer.clipAction(clip);
+                action.reset();
+                action.setEffectiveWeight(1);
+                action.play();
+            }
+        });
+    }
+
+    function playAllAnimations() {
+        if (!mixer || !animations) return;
+        mixer.stopAllAction();
+        animations.forEach(function(clip) {
+            const action = mixer.clipAction(clip);
+            action.reset();
+            action.play();
+        });
+    }
+
+    function stopAnimationsByNames(names) {
+        if (!mixer || !animations) return;
+        names.forEach(function(name) {
+            const clip = THREE.AnimationClip.findByName(animations, name);
+            if (clip) {
+                const action = mixer.clipAction(clip);
+                action.stop();
+            }
+        });
+    }
+
+    function sendModelCardsTo(label, cards) {
+        var iframes = document.getElementsByTagName('iframe');
+        for(var i=0;i<iframes.length;i++){
+            if(iframes[i].getAttribute('data-label') === label){
+                // 监听3D页面的modelLoaded事件
+                var targetWindow = iframes[i].contentWindow;
+                function onMessage(event) {
+                    if(event.data && event.data.command === 'modelLoaded'){
+                        targetWindow.postMessage({
+                            command: 'setModelCards',
+                            cards: cards
+                        }, '*');
+                        window.removeEventListener('message', onMessage); // 只监听一次
+                    }
+                }
+                window.addEventListener('message', onMessage);
+                break;
+            }
+        }
+    }
+
+    // 假设 cards1 是 glb 的顶牌，cards2 是 glbrs 的顶牌
+    // sendModelCardsTo('glb', cards1);
+    // sendModelCardsTo('glbrs', cards2);
+
+    // 2D/3D切换功能
+    document.addEventListener('DOMContentLoaded', function() {
+        const btn = document.getElementById('toggle2D3DBtn');
+        if(btn) {
+            btn.addEventListener('click', function() {
+                if (!isTopView) {
+                    // 记录当前相机位置和target
+                    lastCameraPos = camera.position.clone();
+                    lastCameraTarget = controls.target.clone();
+                    // 切换到俯视
+                    const target = controls.target.clone();
+                    const distance = camera.position.distanceTo(target);
+                    const newPos = new THREE.Vector3(target.x, target.y + distance, target.z);
+                    new TWEEN.Tween(camera.position)
+                        .to({x: newPos.x, y: newPos.y, z: newPos.z}, 600)
+                        .easing(TWEEN.Easing.Quadratic.Out)
+                        .onUpdate(() => controls.update())
+                        .start();
+                    new TWEEN.Tween(controls.target)
+                        .to({x: target.x, y: target.y, z: target.z}, 600)
+                        .easing(TWEEN.Easing.Quadratic.Out)
+                        .onUpdate(() => controls.update())
+                        .start();
+                    btn.textContent = '3D';
+                    isTopView = true;
+            } else {
+                    // 恢复自由视角
+                    if (lastCameraPos && lastCameraTarget) {
+                        new TWEEN.Tween(camera.position)
+                            .to({x: lastCameraPos.x, y: lastCameraPos.y, z: lastCameraPos.z}, 600)
+                            .easing(TWEEN.Easing.Quadratic.Out)
+                            .onUpdate(() => controls.update())
+                            .start();
+                        new TWEEN.Tween(controls.target)
+                            .to({x: lastCameraTarget.x, y: lastCameraTarget.y, z: lastCameraTarget.z}, 600)
+                            .easing(TWEEN.Easing.Quadratic.Out)
+                            .onUpdate(() => controls.update())
+                            .start();
+                    }
+                    btn.textContent = '2D';
+                    isTopView = false;
+                }
+            });
+        }
+    });
+
+    </script>
+
+    <!-- 4. 所有功能区、按钮等UI元素放在body最后 -->
+    <div id="button-hover-area" style="display:none;"></div>
+    <div id="button-wrapper" style="position:absolute;top:10px;right:10px;z-index:101;display:flex;align-items:center;display:none;">
+        <div id="light-info" style="display:none;margin-right:12px;background:rgba(255,255,255,0.85);padding:4px 12px;border-radius:6px;font-size:13px;color:#333;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+            环境光: <span id="ambient-intensity">-</span> 太阳光: <span id="sun-intensity">-</span>
+        </div>
+        <button id="copyCameraPosBtn">复制相机位置</button>
+        <button id="screenshotBtn">截图</button>
+        <button id="copyModelListBtn">复制模型列表</button>
+        <button id="copyAnimationListBtn">复制动画名称</button>
+    </div>
+    <button id="toggle2D3DBtn" style="position:absolute;top:76px;right:10px;z-index:102;padding:8px 18px;font-size:15px;background:#222;color:#fff;border:none;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,0.08);cursor:pointer;display:none;">2D</button>
+    <button id="toggleWalkthroughBtn" title="切换漫游模式">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+            <path d="M11.5 2.5a.5.5 0 0 1 .5.5v18a.5.5 0 0 1-1 0V3a.5.5 0 0 1 .5-.5zM8.293 4.207a.5.5 0 0 1 .707 0l2.5 2.5a.5.5 0 0 1-.707.707L9 5.707V11.5a.5.5 0 0 1-1 0V5.707L5.293 7.414a.5.5 0 0 1-.707-.707l2.5-2.5a.5.5 0 0 1 .5-.5zM15 12.5a.5.5 0 0 1 .5-.5h2.5a.5.5 0 0 1 0 1H15.5a.5.5 0 0 1-.5-.5zm.293 3.207a.5.5 0 0 1 .707 0l2.5 2.5a.5.5 0 0 1-.707.707L15 17.707V20.5a.5.5 0 0 1-1 0v-2.793l-2.207 2.207a.5.5 0 0 1-.707-.707l2.5-2.5a.5.5 0 0 1 .5-.5z"/>
+        </svg>
+    </button>
+</body>
+</html>

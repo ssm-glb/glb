@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>思维导图演示</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+        }
+        #container {
+            width: 1200px;
+            height: 750px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+
+    <!-- 依赖库 -->
+    <script src="https://ssm-smart.github.io/axure/three/g6.min.js"></script>
+    <script src="https://ssm-smart.github.io/axure/three/xlsx.full.min.js"></script>
+
+    <script>
+        window.onload = function() {
+            if (!window.G6) {
+                document.getElementById('container').innerHTML = '<div style="color:red;text-align:center;padding-top:40px;">G6 加载失败，请用本地服务器访问本页面！</div>';
+            }
+        }
+
+        function isRootPid(pid) {
+            // 只认 "" 或 "0" 为根节点
+            return pid === '' || pid === '0';
+        }
+
+        function flatToTree(data) {
+            const idMap = {};
+            data.forEach(item => idMap[item.id] = { ...item, children: [] });
+            let root = null;
+            data.forEach(item => {
+                if (isRootPid(item.pid)) {
+                    root = idMap[item.id];
+                } else if (idMap[item.pid]) {
+                    idMap[item.pid].children.push(idMap[item.id]);
+                }
+            });
+            return root;
+        }
+
+        function toVertical(str) {
+            return str.split('').join('\n');
+        }
+
+        function getTextWidth(text, fontSize = 14) {
+            // 粗略估算：一个中文字符≈fontSize px，一个英文字符≈fontSize*0.6 px
+            let width = 0;
+            for (let c of text) {
+                width += /[\u4e00-\u9fa5]/.test(c) ? fontSize : fontSize * 0.6;
+            }
+            return width;
+        }
+
+        const branchColors = [
+            '#FF4D4F', // 红
+            '#FA8C16', // 橙
+            '#FADB14', // 黄
+            '#52C41A', // 绿
+            '#1890FF', // 蓝
+            '#722ED1', // 紫
+            '#EB2F96', // 粉
+            '#13C2C2', // 青
+        ];
+
+        function getTextColor(bgColor) {
+            // 简单亮度判断，亮色用黑字，暗色用白字
+            if (!bgColor) return '#333';
+            const color = bgColor.replace('#', '');
+            const r = parseInt(color.substr(0, 2), 16);
+            const g = parseInt(color.substr(2, 2), 16);
+            const b = parseInt(color.substr(4, 2), 16);
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            return brightness > 180 ? '#333' : '#fff';
+        }
+
+        function hexToRgba(hex, alpha = 1) {
+            const color = hex.replace('#', '');
+            const r = parseInt(color.substr(0, 2), 16);
+            const g = parseInt(color.substr(2, 2), 16);
+            const b = parseInt(color.substr(4, 2), 16);
+            return `rgba(${r},${g},${b},${alpha})`;
+        }
+
+        function walk(node, level = 1, branchColor = null, branchIdx = 0) {
+            node.level = level;
+            node.collapsed = node.collapsed || false;
+
+            // 一级分支分配色
+            if (level === 2) {
+                branchColor = branchColors[branchIdx % branchColors.length];
+                node.branchColor = branchColor;
+            } else if (level > 2) {
+                node.branchColor = branchColor;
+            }
+
+            // label内容
+            if (level === 4) {
+                node.label = toVertical(node.name) + (node.value ? ('\n' + toVertical(node.value)) : '');
+            } else {
+                node.label = node.name + (node.value ? ('\n' + node.value) : '');
+            }
+            const lines = node.label.split('\n');
+            const maxLineLen = Math.max(...lines.map(line => getTextWidth(line, 14)));
+            node.size = [maxLineLen + 20, 22 * lines.length + 20];
+
+            // 颜色和透明度
+            let fill = '#fff', stroke = '#f00', fontColor = '#333';
+            if (level === 1) {
+                fill = '#111';
+                stroke = '#111';
+                fontColor = '#fff';
+            } else if (level === 2) {
+                fill = node.branchColor;
+                stroke = node.branchColor;
+                fontColor = getTextColor(node.branchColor);
+            } else if (level === 3) {
+                fill = hexToRgba(node.branchColor, 0.5);
+                stroke = node.branchColor;
+                fontColor = getTextColor(node.branchColor);
+            } else if (level === 4) {
+                fill = hexToRgba(node.branchColor, 0.2);
+                stroke = node.branchColor;
+                fontColor = getTextColor(node.branchColor);
+            }
+
+            node.labelCfg = {
+                style: {
+                    textAlign: 'center',
+                    textBaseline: 'top',
+                    fontSize: 14,
+                    fill: fontColor
+                }
+            };
+            node.style = {
+                radius: 6,
+                fill: fill,
+                stroke: stroke,
+                lineWidth: 1 // 边框更细
+            };
+
+            if (node.children && node.children.length === 0) delete node.children;
+            else if (node.children) {
+                node.children.forEach((child, idx) => {
+                    if (level === 1) {
+                        walk(child, level + 1, null, idx);
+                    } else {
+                        walk(child, level + 1, branchColor, branchIdx);
+                    }
+                });
+            }
+        }
+
+        function unifyChildrenSize(node) {
+            if (node.children && node.children.length > 0) {
+                // 取同级最大宽高
+                let maxW = 0, maxH = 0;
+                node.children.forEach(child => {
+                    if (child.size) {
+                        if (child.size[0] > maxW) maxW = child.size[0];
+                        if (child.size[1] > maxH) maxH = child.size[1];
+                    }
+                });
+                node.children.forEach(child => {
+                    if (child.size) {
+                        child.size[0] = maxW;
+                        child.size[1] = maxH;
+                    }
+                });
+                node.children.forEach(child => unifyChildrenSize(child));
+            }
+        }
+
+        function collectLevelMaxHeight(node, level = 1, levelMaxHeight = {}) {
+            if (!levelMaxHeight[level]) levelMaxHeight[level] = 0;
+            if (node.size && node.size[1] > levelMaxHeight[level]) {
+                levelMaxHeight[level] = node.size[1];
+            }
+            if (node.children) {
+                node.children.forEach(child => collectLevelMaxHeight(child, level + 1, levelMaxHeight));
+            }
+            return levelMaxHeight;
+        }
+
+        function setLevelHeight(node, level = 1, levelMaxHeight) {
+            if (node.size) node.size[1] = levelMaxHeight[level];
+            if (node.children) {
+                node.children.forEach(child => setLevelHeight(child, level + 1, levelMaxHeight));
+            }
+        }
+
+        function renderMindMap(treeData) {
+            document.getElementById('container').innerHTML = '';
+            const width = 1200;
+            const height = 800;
+
+            const tooltip = new G6.Tooltip({
+                offsetX: 10,
+                offsetY: 20,
+                itemTypes: ['node'],
+                getContent: (e) => {
+                    return `<div style="padding:4px 8px;">单击enter,增加子级</div>`;
+                }
+            });
+
+            const graph = new G6.TreeGraph({
+                container: 'container',
+                width,
+                height,
+                modes: {
+                    default: ['drag-canvas', 'zoom-canvas', 'collapse-expand']
+                },
+                defaultNode: {
+                    type: 'custom-rect',
+                    size: (model) => model.size || [120, 40],
+                    style: (model) => model.style || {
+                        radius: 6,
+                        fill: '#fff',
+                        stroke: '#f00',
+                        lineWidth: 2
+                    },
+                    anchorPoints: [
+                        [0.5, 0],
+                        [0.5, 1]
+                    ]
+                },
+                defaultEdge: {
+                    type: 'custom-polyline',
+                    style: (edge) => {
+                        // edge.target 是子节点
+                        return {
+                            stroke: edge.target.branchColor || '#A3B1BF'
+                        }
+                    },
+                    sourceAnchor: 1,
+                    targetAnchor: 0
+                },
+                layout: {
+                    type: 'compactBox',
+                    direction: 'TB',
+                    getId: function getId(d) {
+                        return d.id;
+                    },
+                    getHeight: (d) => d.size ? d.size[1] : 40,
+                    getWidth: (d) => d.size ? d.size[0] : 120,
+                    getVGap: (d) => {
+                        if (d.level === 3) return 80;
+                        return 50;
+                    },
+                    getHGap: () => 2,
+                    getCollapsed: d => d.collapsed,
+                    align: 'left'
+                },
+                plugins: [tooltip]
+            });
+
+            graph.data(treeData);
+            graph.render();
+
+            // 获取内容包围盒
+            const bbox = graph.get('group').getBBox();
+            const containerCenterX = width / 2;
+            const containerCenterY = height / 2;
+            const contentCenterX = bbox.x + bbox.width / 2;
+            const contentCenterY = bbox.y + bbox.height / 2;
+            graph.moveTo(containerCenterX - contentCenterX, containerCenterY - contentCenterY);
+
+            console.log('treeData:', treeData);
+        }
+
+        function getQueryParam(name) {
+            const url = window.location.search;
+            const params = new URLSearchParams(url);
+            return params.get(name);
+        }
+
+        const excelUrl = getQueryParam('excelUrl') || 'https://ssm-smart.github.io/axure/fujian/sj.xlsx';
+
+        fetch(excelUrl)
+            .then(res => res.arrayBuffer())
+            .then(buffer => {
+                const workbook = XLSX.read(buffer, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(firstSheet);
+                console.log('Excel解析结果:', json);
+                const normalized = json.map(row => ({
+                    id: String(row.id || row.ID).trim(),
+                    name: String(row.name || row.NAME || '').trim(),
+                    pid: String(row.pid || row.PID || '').trim(),
+                    value: String(row.value || row.VALUE || '').trim(),
+                }));
+                // G6 只认 label 字段
+                const treeData = flatToTree(normalized);
+                if (treeData) {
+                    walk(treeData, 1);
+                    const levelMaxHeight = collectLevelMaxHeight(treeData);
+                    setLevelHeight(treeData, 1, levelMaxHeight);
+                    renderMindMap(treeData);
+                } else {
+                    document.getElementById('container').innerHTML = '<div style="color:red;text-align:center;padding-top:40px;">sj.xlsx 数据无根节点，请检查pid字段！</div>';
+                }
+            })
+            .catch(err => {
+                document.getElementById('container').innerHTML = '<div style="color:red;text-align:center;padding-top:40px;">sj.xlsx 加载失败</div>';
+                console.error('sj.xlsx 加载失败:', err);
+            });
+
+        // 注册自定义节点
+        G6.registerNode('custom-rect', {
+            draw(cfg, group) {
+                const width = cfg.size ? cfg.size[0] : 120;
+                const height = cfg.size ? cfg.size[1] : 40;
+                const rect = group.addShape('rect', {
+                    attrs: {
+                        x: -width / 2,
+                        y: -height / 2,
+                        width,
+                        height,
+                        radius: 6,
+                        fill: cfg.style && cfg.style.fill ? cfg.style.fill : '#fff',
+                        stroke: cfg.style && cfg.style.stroke ? cfg.style.stroke : '#5B8FF9',
+                        lineWidth: cfg.style && cfg.style.lineWidth ? cfg.style.lineWidth : 1.5,
+                        title: '单击enter,增加子级'
+                    },
+                    name: 'rect-shape',
+                    draggable: true
+                });
+                const label = cfg.label ? cfg.label.split('\n') : [];
+                label.forEach((line, i) => {
+                    group.addShape('text', {
+                        attrs: {
+                            x: 0,
+                            y: -height / 2 + 8 + i * 18,
+                            text: line,
+                            fontSize: 14,
+                            fill: cfg.labelCfg?.style?.fill || '#333',
+                            textAlign: 'center',
+                            textBaseline: 'top'
+                        },
+                        name: 'text-shape'
+                    });
+                });
+                // 添加marker
+                if (cfg.children && cfg.children.length > 0) {
+                    group.addShape('marker', {
+                        attrs: {
+                            x: 0,
+                            y: (cfg.size ? cfg.size[1] : 40) / 2 + 8,
+                            r: 6,
+                            symbol: G6.Marker.expand,
+                            stroke: '#666',
+                            fill: '#fff'
+                        },
+                        name: 'collapse-marker'
+                    });
+                }
+                return rect;
+            }
+        }, 'rect');
+
+        G6.registerEdge('custom-polyline', {
+            getControlPoints(cfg) {
+                const start = cfg.startPoint;
+                const end = cfg.endPoint;
+                return [
+                    { x: end.x, y: start.y }
+                ];
+            }
+        }, 'polyline');
+    </script>
+</body>
+</html>
