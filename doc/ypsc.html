@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>药品销售小程序整体方案</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --secondary: #2ecc71;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light: #f8f9fa;
+            --dark: #343a40;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f7fa;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary), #1a5f9e);
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .download-btn {
+            display: inline-block;
+            background: var(--secondary);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-top: 20px;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+        
+        .download-btn:hover {
+            background: #27ae60;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .section-title {
+            color: var(--primary);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary);
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title i {
+            margin-right: 10px;
+            font-size: 1.5rem;
+        }
+        
+        .card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+            border: 1px solid #eaeaea;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-header {
+            padding: 15px 20px;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .card-primary .card-header {
+            background: var(--primary);
+        }
+        
+        .card-secondary .card-header {
+            background: var(--secondary);
+        }
+        
+        .card-warning .card-header {
+            background: var(--warning);
+        }
+        
+        .card-danger .card-header {
+            background: var(--danger);
+        }
+        
+        .card-body {
+            padding: 20px;
+        }
+        
+        .card-body h3 {
+            margin-bottom: 15px;
+            color: var(--dark);
+        }
+        
+        .list-item {
+            margin-bottom: 12px;
+            padding-left: 25px;
+            position: relative;
+        }
+        
+        .list-item:before {
+            content: "•";
+            position: absolute;
+            left: 10px;
+            color: var(--primary);
+            font-weight: bold;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        
+        .badge-time {
+            background: #e3f2fd;
+            color: var(--primary);
+        }
+        
+        .badge-cost {
+            background: #e8f5e9;
+            color: var(--secondary);
+        }
+        
+        .badge-warning {
+            background: #fff8e1;
+            color: var(--warning);
+        }
+        
+        .badge-danger {
+            background: #ffebee;
+            color: var(--danger);
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .comparison-table th, 
+        .comparison-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .comparison-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: var(--dark);
+        }
+        
+        .comparison-table tr:hover {
+            background-color: #f5f7fa;
+        }
+        
+        .note-box {
+            background: #fffde7;
+            border-left: 4px solid var(--warning);
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+            margin: 30px 0;
+        }
+        
+        .timeline:before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 3px;
+            background: var(--primary);
+        }
+        
+        .timeline-item {
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .timeline-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .timeline-item:before {
+            content: '';
+            position: absolute;
+            left: -33px;
+            top: 5px;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: 3px solid white;
+        }
+        
+        .timeline-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: var(--primary);
+        }
+        
+        .timeline-content {
+            background: #f0f7ff;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .card-container {
+                grid-template-columns: 1fr;
+            }
+            
+            header {
+                padding: 20px;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>药品销售小程序整体方案</h1>
+            <p class="subtitle">全面指南：从资质准备到上线运营，涵盖非处方药与处方药销售要求</p>
+        </header>
+        
+        <div class="content">
+            <div class="section">
+                <h2 class="section-title">方案概述</h2>
+                <p>本方案提供药品销售小程序从资质准备到上线运营的全流程指南，明确区分非处方药（OTC）和处方药（Rx）的不同要求，包括资质、时间、成本及各方责任分工。</p>
+                
+                <div class="card-container">
+                    <div class="card card-primary">
+                        <div class="card-header">非处方药（OTC）</div>
+                        <div class="card-body">
+                            <h3>基础要求</h3>
+                            <div class="list-item">仅限乙类OTC药品线上销售</div>
+                            <div class="list-item">无需处方，用户可直接购买</div>
+                            <div class="list-item">监管要求相对较低</div>
+                            
+                            <h3 style="margin-top: 20px;">时间与成本</h3>
+                            <div class="list-item">准备时间：<span class="badge badge-time">3-5个月</span></div>
+                            <div class="list-item">总成本：<span class="badge badge-cost">25-50万元</span></div>
+                        </div>
+                    </div>
+                    
+                    <div class="card card-danger">
+                        <div class="card-header">处方药（Rx）</div>
+                        <div class="card-body">
+                            <h3>特别要求</h3>
+                            <div class="list-item">需额外获得处方药销售许可</div>
+                            <div class="list-item">必须建立处方审核系统</div>
+                            <div class="list-item">当前政策限制严格</div>
+                            
+                            <h3 style="margin-top: 20px;">时间与成本</h3>
+                            <div class="list-item">准备时间：<span class="badge badge-time">额外6-8个月</span></div>
+                            <div class="list-item">总成本：<span class="badge badge-cost">额外30-60万元</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="note-box">
+                    <strong>重要提示：</strong> 建议优先启动非处方药（OTC）销售，在运营稳定后再申请处方药销售资质。处方药销售政策仍在变化中，需密切关注国家药监局最新规定。
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2 class="section-title">非处方药（OTC）销售方案</h2>
+                
+                <h3>企业方（您）需要提供的资质</h3>
+                <div class="card card-secondary">
+                    <div class="card-body">
+                        <div class="list-item"><strong>《营业执照》</strong> - 含"药品零售"经营范围 <span class="badge badge-time">1-2周</span></div>
+                        <div class="list-item"><strong>《药品经营许可证》</strong> - 药监局审批 <span class="badge badge-time">2-3个月</span> <span class="badge badge-cost">5-10万</span></div>
+                        <div class="list-item"><strong>《互联网药品信息服务资格证》</strong> <span class="badge badge-time">1-2个月</span></div>
+                        <div class="list-item"><strong>《互联网药品交易服务资格证》（C证）</strong> <span class="badge badge-time">2-3个月</span></div>
+                        <div class="list-item"><strong>执业药师资格证书</strong> - 至少1名全职 <span class="badge badge-cost">年薪15万+</span></div>
+                        <div class="list-item"><strong>GSP认证仓储证明</strong> - 100㎡以上 <span class="badge badge-cost">年投入10万+</span></div>
+                        <div class="list-item"><strong>药品供应商资质文件</strong></div>
+                        <div class="list-item"><strong>独家药品授权证明</strong></div>
+                    </div>
+                </div>
+                
+                <h3 style="margin-top: 30px;">合作方（开发团队）提供内容</h3>
+                <div class="card card-primary">
+                    <div class="card-body">
+                        <div class="list-item"><strong>小程序开发与部署</strong> <span class="badge badge-time">1-2个月</span> <span class="badge badge-cost">8-15万</span></div>
+                        <div class="list-item"><strong>GSP系统对接开发</strong> - 进销存管理</div>
+                        <div class="list-item"><strong>支付系统接入</strong> - 微信支付/银联</div>
+                        <div class="list-item"><strong>药品物流API对接</strong> - 支持药监认可物流</div>
+                        <div class="list-item"><strong>药师咨询功能开发</strong></div>
+                        <div class="list-item"><strong>数据加密与安全方案</strong></div>
+                        <div class="list-item"><strong>协助微信类目审核</strong></div>
+                    </div>
+                </div>
+                
+                <h3 style="margin-top: 30px;">OTC整体时间线与成本</h3>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-title">阶段一：资质准备（3-4个月）</div>
+                        <div class="timeline-content">
+                            <p>企业注册 → 实体店设立 → 申请药品经营许可 → 办理互联网药品双证</p>
+                            <p><strong>成本：</strong> 资质申请5-10万 + 实体店投入10-20万 + 药师成本</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-title">阶段二：开发与对接（1-2个月）</div>
+                        <div class="timeline-content">
+                            <p>小程序开发 → GSP系统对接 → 支付/物流接入 → 安全测试</p>
+                            <p><strong>成本：</strong> 开发费用8-15万 + 系统对接3-5万</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-title">阶段三：审核上线（1个月）</div>
+                        <div class="timeline-content">
+                            <p>微信审核 → 试运营 → 正式上线</p>
+                            <p><strong>成本：</strong> 服务器/运维年费2-5万</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="note-box">
+                    <strong>OTC总成本估算：</strong> 25-50万元（不含药品采购成本）<br>
+                    <strong>总时间估算：</strong> 5-7个月（资质审批时间为关键变量）
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2 class="section-title">处方药（Rx）销售方案</h2>
+                
+                <div class="note-box">
+                    <strong>政策警示：</strong> 目前处方药线上销售尚未完全开放，仅部分地区试点。需获得特别审批，政策风险高。
+                </div>
+                
+                <h3>额外资质要求（企业方提供）</h3>
+                <div class="card card-danger">
+                    <div class="card-body">
+                        <div class="list-item"><strong>处方药销售专项许可</strong> <span class="badge badge-time">4-6个月</span></div>
+                        <div class="list-item"><strong>医疗机构合作证明</strong>（或互联网医院资质）</div>
+                        <div class="list-item"><strong>处方审核药师团队</strong> - 至少3名执业药师 <span class="badge badge-cost">+30万/年</span></div>
+                        <div class="list-item"><strong>处方管理系统认证</strong></div>
+                        <div class="list-item"><strong>冷链仓储扩容证明</strong>（如需） <span class="badge badge-cost">+5-10万</span></div>
+                    </div>
+                </div>
+                
+                <h3 style="margin-top: 30px;">系统开发要求（合作方提供）</h3>
+                <div class="card card-warning">
+                    <div class="card-body">
+                        <div class="list-item"><strong>处方上传与OCR识别系统</strong> <span class="badge badge-time">1-2个月</span> <span class="badge badge-cost">8-12万</span></div>
+                        <div class="list-item"><strong>药师审核后台</strong> - 实时审核功能</div>
+                        <div class="list-item"><strong>处方防伪与追溯系统</strong></div>
+                        <div class="list-item"><strong>电子签名与加密系统</strong></div>
+                        <div class="list-item"><strong>医疗数据安全方案</strong> - 等保三级 <span class="badge badge-cost">+3-5万</span></div>
+                        <div class="list-item"><strong>对接区域处方共享平台</strong></div>
+                    </div>
+                </div>
+                
+                <h3 style="margin-top: 30px;">处方药分工与流程</h3>
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>流程环节</th>
+                            <th>企业方责任</th>
+                            <th>开发团队责任</th>
+                            <th>时间要求</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>处方获取</td>
+                            <td>验证用户身份/处方来源</td>
+                            <td>开发OCR识别/上传功能</td>
+                            <td>1个月</td>
+                        </tr>
+                        <tr>
+                            <td>处方审核</td>
+                            <td>药师团队实时审核</td>
+                            <td>构建审核后台/提醒系统</td>
+                            <td>2-3周</td>
+                        </tr>
+                        <tr>
+                            <td>药品调配</td>
+                            <td>按处方配药/复核</td>
+                            <td>对接GSP系统锁定库存</td>
+                            <td>2周</td>
+                        </tr>
+                        <tr>
+                            <td>安全交付</td>
+                            <td>选择合规物流</td>
+                            <td>开发处方药专属物流接口</td>
+                            <td>3周</td>
+                        </tr>
+                        <tr>
+                            <td>存档追溯</td>
+                            <td>保存处方5年以上</td>
+                            <td>开发加密存档/追溯系统</td>
+                            <td>1个月</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="note-box">
+                    <strong>处方药总成本估算：</strong> 额外30-60万元（不含资质申请费）<br>
+                    <strong>总时间估算：</strong> 额外6-8个月（政策审批时间为关键瓶颈）
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2 class="section-title">实施建议</h2>
+                
+                <div class="card-container">
+                    <div class="card card-primary">
+                        <div class="card-header">分阶段实施</div>
+                        <div class="card-body">
+                            <div class="list-item">第一阶段：专注OTC药品销售</div>
+                            <div class="list-item">第二阶段：申请处方药试点资质</div>
+                            <div class="list-item">第三阶段：上线处方药模块</div>
+                        </div>
+                    </div>
+                    
+                    <div class="card card-secondary">
+                        <div class="card-header">成本控制建议</div>
+                        <div class="card-body">
+                            <div class="list-item">优先使用SaaS版GSP系统</div>
+                            <div class="list-item">与区域性物流公司合作</div>
+                            <div class="list-item">采用模块化开发，逐步扩展</div>
+                        </div>
+                    </div>
+                    
+                    <div class="card card-warning">
+                        <div class="card-header">风险防范</div>
+                        <div class="card-body">
+                            <div class="list-item">避免预售未获批药品</div>
+                            <div class="list-item">宣传文案需药监审核</div>
+                            <div class="list-item">建立药品追溯体系</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="note-box">
+                    <strong>最后建议：</strong> 在正式启动前，务必咨询省级药品监督管理局获取最新政策指导，并聘请专业医药法律顾问。
+                </div>
+            </div>
+        </div>
+        
+
+    </div>
+    
+    </body>
+</html>

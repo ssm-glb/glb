@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>佛山第三人民医院测评报告</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1a365d',       // 深蓝主色调
+                        secondary: '#2d3748',     // 次深蓝
+                        accent: '#4a5568',        // 中性灰
+                        light: '#edf2f7',         // 浅灰背景
+                        success: '#2b6cb0',       // 成功色（用于数据突出）
+                        dark: '#1a202c',          // 深灰文本
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans SC', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .whitepaper-cover {
+                @apply relative min-h-screen flex items-center justify-center bg-white p-8 md:p-16;
+            }
+            .cover-title {
+                @apply text-[clamp(2rem,5vw,3.5rem)] font-bold text-primary leading-tight text-center;
+            }
+            .cover-subtitle {
+                @apply text-[clamp(1rem,2vw,1.5rem)] text-secondary mt-6 text-center max-w-2xl mx-auto;
+            }
+            .cover-meta {
+                @apply mt-12 text-center space-y-4 text-accent;
+            }
+            .cover-divider {
+                @apply absolute inset-x-0 h-1 bg-light my-8 md:my-16;
+            }
+            .toc-section {
+                @apply py-12 md:py-16 bg-light;
+            }
+            .toc-title {
+                @apply text-3xl md:text-4xl font-bold text-primary mb-8 text-center;
+            }
+            .toc-list {
+                @apply max-w-3xl mx-auto space-y-4;
+            }
+            .toc-item {
+                @apply flex items-start p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow;
+            }
+            .toc-number {
+                @apply flex-shrink-0 w-8 h-8 flex items-center justify-center bg-primary text-white rounded-full font-medium mr-4;
+            }
+            .toc-content {
+                @apply flex-1;
+            }
+            .toc-heading {
+                @apply font-semibold text-lg text-dark mb-1;
+            }
+            .toc-desc {
+                @apply text-accent text-sm;
+            }
+            .whitepaper-footer {
+                @apply py-12 md:py-16 bg-white border-t border-light;
+            }
+            .footer-content {
+                @apply max-w-4xl mx-auto px-4;
+            }
+            .footer-logo {
+                @apply flex items-center justify-center mb-8;
+            }
+            .footer-divider {
+                @apply w-16 h-1 bg-primary mx-auto mb-8;
+            }
+            .footer-text {
+                @apply text-center text-accent mb-8 leading-relaxed;
+            }
+            .footer-meta {
+                @apply flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-8 text-sm text-accent;
+            }
+            .section-break {
+                @apply my-16 md:my-24;
+            }
+            .report-section {
+                @apply mb-16 md:mb-24 border-b border-light pb-12 md:pb-16;
+            }
+            .report-card {
+                @apply bg-white rounded-lg shadow-sm border border-gray-100 p-6 md:p-8 transition-all duration-300 hover:shadow-md;
+            }
+            .data-highlight {
+                @apply text-primary font-semibold;
+            }
+            .section-title {
+                @apply text-2xl md:text-3xl font-bold text-primary mb-8 md:mb-10 flex items-start;
+            }
+            .section-title::before {
+                content: '';
+                @apply w-1 h-6 bg-primary rounded-full mr-4 mt-1;
+            }
+            .subsection-title {
+                @apply text-xl md:text-2xl font-semibold text-dark mb-6 mt-10 md:mt-12;
+            }
+            .table-header {
+                @apply bg-light text-dark font-medium text-sm;
+            }
+            .table-row {
+                @apply hover:bg-gray-50 transition-colors;
+            }
+            .badge {
+                @apply px-3 py-1 rounded-full text-xs font-medium;
+            }
+            .badge-success {
+                @apply bg-success/10 text-success;
+            }
+            .metric-card {
+                @apply bg-white border border-gray-200 rounded-lg p-5 md:p-6 shadow-sm hover:shadow-md transition-shadow;
+            }
+        }
+    </style>
+</head>
+<body class="font-sans text-dark bg-white">
+    <!-- 白皮书封面 -->
+    <section class="whitepaper-cover">
+        <div class="absolute inset-0 bg-[url('https://picsum.photos/seed/whitepaper/1920/1080')] bg-cover bg-center opacity-10"></div>
+        <div class="relative z-10 text-center">
+            <div class="cover-divider"></div>
+            <h1 class="cover-title">佛山第三人民医院测评报告</h1>
+            <p class="cover-subtitle">冷站/热水/照明系统节能改造效果评估报告</p>
+            <div class="cover-meta">
+                <p class="text-lg">佛山市第一人民医院</p>
+                <p>2025.07.01至2026.06.30</p>
+                <p>2026.07.01</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section-break"></section>
+ <!-- 白皮书目录 -->
+ <section class="toc-section">
+    <div class="container mx-auto">
+        <h2 class="toc-title">目录</h2>
+        <div class="toc-list">
+            <div class="toc-item">
+                <div class="toc-number">1</div>
+                <div class="toc-content">
+                    <div class="toc-heading">项目概况</div>
+                    <div class="toc-desc">医院基本信息与改造项目概述</div>
+                </div>
+            </div>
+            <div class="toc-item">
+                <div class="toc-number">2</div>
+                <div class="toc-content">
+                    <div class="toc-heading">改造前后能耗对比</div>
+                    <div class="toc-desc">核心指标对比与能源结构分析</div>
+                </div>
+            </div>
+            <div class="toc-item">
+                <div class="toc-number">3</div>
+                <div class="toc-content">
+                    <div class="toc-heading">冷站改造效果</div>
+                    <div class="toc-desc">磁悬浮冷水机组与变频控制节能效益</div>
+                </div>
+            </div>
+            <div class="toc-item">
+                <div class="toc-number">4</div>
+                <div class="toc-content">
+                    <div class="toc-heading">热水系统改造</div>
+                    <div class="toc-desc">空气源热泵与管道保温技术应用</div>
+                </div>
+            </div>
+            <div class="toc-item">
+                <div class="toc-number">5</div>
+                <div class="toc-content">
+                    <div class="toc-heading">照明系统改造</div>
+                    <div class="toc-desc">LED灯具与智能感应控制节能分析</div>
+                </div>
+            </div>
+            <div class="toc-item">
+                <div class="toc-number">6</div>
+                <div class="toc-content">
+                    <div class="toc-heading">投资回报分析</div>
+                    <div class="toc-desc">改造项目经济性与环境效益评估</div>
+                </div>
+            </div>
+            <div class="toc-item">
+                <div class="toc-number">7</div>
+                <div class="toc-content">
+                    <div class="toc-heading">实时监测数据</div>
+                    <div class="toc-desc">改造系统运行状态与节能成效跟踪</div>
+                </div>
+            </div>
+            <div class="toc-item">
+                <div class="toc-number">8</div>
+                <div class="toc-content">
+                    <div class="toc-heading">附录</div>
+                    <div class="toc-desc">相关文件、数据与标准依据</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<section class="section-break"></section>
+    <!-- 报告内容 -->
+    <main class="container mx-auto px-4 md:px-8">
+        <!-- 项目概况 -->
+        <section class="report-section" id="project-overview">
+            <h2 class="section-title">1. 项目概况</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="report-card">
+                    <h3 class="subsection-title">医院基本信息</h3>
+                    <ul class="space-y-3">
+                        <li class="flex justify-between">
+                            <span class="font-medium">医院等级：</span>
+                            <span class="data-highlight">三级甲等</span>
+                        </li>
+                        <li class="flex justify-between">
+                            <span class="font-medium">建筑面积：</span>
+                            <span class="data-highlight">15.2万平方米</span>
+                        </li>
+                        <li class="flex justify-between">
+                            <span class="font-medium">开放床位数：</span>
+                            <span class="data-highlight">1200张</span>
+                        </li>
+                        <li class="flex justify-between">
+                            <span class="font-medium">日均门诊量：</span>
+                            <span class="data-highlight">3500人次</span>
+                        </li>
+                        <li class="flex justify-between">
+                            <span class="font-medium">改造周期：</span>
+                            <span class="data-highlight">2025年1月-5月</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="report-card">
+                    <h3 class="subsection-title">改造项目概况</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center">
+                            <div class="bg-primary/10 p-2 rounded-full mr-3">
+                                <i class="fa fa-snowflake-o text-primary"></i>
+                            </div>
+                            <div>
+                                <div class="font-medium">冷站系统改造</div>
+                                <div class="text-sm text-gray-600">4台冷水机组及附属设备</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="bg-secondary/10 p-2 rounded-full mr-3">
+                                <i class="fa fa-tint text-secondary"></i>
+                            </div>
+                            <div>
+                                <div class="font-medium">热水系统改造</div>
+                                <div class="text-sm text-gray-600">3套热源设备及管道</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="bg-accent/10 p-2 rounded-full mr-3">
+                                <i class="fa fa-lightbulb-o text-accent"></i>
+                            </div>
+                            <div>
+                                <div class="font-medium">照明系统改造</div>
+                                <div class="text-sm text-gray-600">全院5240套灯具</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="report-card">
+                    <h3 class="subsection-title">改造后关键指标</h3>
+                    <div class="space-y-4">
+                        <div class="metric-card">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="text-sm text-gray-500">单位面积能耗</div>
+                                    <div class="text-2xl font-bold text-dark">141.5 kWh/m²</div>
+                                </div>
+                                <div class="bg-success/10 text-success p-2 rounded-full">
+                                    <i class="fa fa-arrow-down"></i>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-2">较改造前下降25%，优于行业基准6.7%</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="text-sm text-gray-500">年节约能源费用</div>
+                                    <div class="text-2xl font-bold text-dark">¥690.5万</div>
+                                </div>
+                                <div class="bg-success/10 text-success p-2 rounded-full">
+                                    <i class="fa fa-plus"></i>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-2">折合标准煤约2300吨/年</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="text-sm text-gray-500">CO₂减排量</div>
+                                    <div class="text-2xl font-bold text-dark">6850吨/年</div>
+                                </div>
+                                <div class="bg-success/10 text-success p-2 rounded-full">
+                                    <i class="fa fa-leaf"></i>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-2">相当于种植3.8万棵树</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 改造前后能耗对比 -->
+        <section class="report-section" id="energy-comparison">
+            <h2 class="section-title">2. 改造前后能耗对比</h2>
+            
+            <div class="report-card">
+                <h3 class="subsection-title">核心能耗指标对比</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="table-header">
+                            <tr>
+                                <th class="px-6 py-3 text-left">指标</th>
+                                <th class="px-6 py-3 text-left">改造前(2024年)</th>
+                                <th class="px-6 py-3 text-left">改造后(2025年)</th>
+                                <th class="px-6 py-3 text-left">节能率</th>
+                                <th class="px-6 py-3 text-left">行业基准</th>
+                                <th class="px-6 py-3 text-left">评价</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr class="table-row">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="bg-blue-100 p-2 rounded mr-3">
+                                            <i class="fa fa-bolt text-primary"></i>
+                                        </div>
+                                        <span>电力消耗</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">28,650,000 kWh</td>
+                                <td class="px-6 py-4">21,480,000 kWh</td>
+                                <td class="px-6 py-4">
+                                    <span class="text-success font-medium">25%</span>
+                                </td>
+                                <td class="px-6 py-4">195 kWh/m²</td>
+                                <td class="px-6 py-4">
+                                    <span class="badge badge-success">优于基准</span>
+                                </td>
+                            </tr>
+                            <tr class="table-row">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="bg-orange-100 p-2 rounded mr-3">
+                                            <i class="fa fa-fire text-orange-500"></i>
+                                        </div>
+                                        <span>天然气消耗</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">1,250,000 m³</td>
+                                <td class="px-6 py-4">925,000 m³</td>
+                                <td class="px-6 py-4">
+                                    <span class="text-success font-medium">26%</span>
+                                </td>
+                                <td class="px-6 py-4">7.5 m³/m²</td>
+                                <td class="px-6 py-4">
+                                    <span class="badge badge-success">优于基准</span>
+                                </td>
+                            </tr>
+                            <tr class="table-row">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="bg-blue-200 p-2 rounded mr-3">
+                                            <i class="fa fa-tint text-blue-600"></i>
+                                        </div>
+                                        <span>单位面积能耗</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">188.5 kWh/m²</td>
+                                <td class="px-6 py-4">141.5 kWh/m²</td>
+                                <td class="px-6 py-4">
+                                    <span class="text-success font-medium">25%</span>
+                                </td>
+                                <td class="px-6 py-4">150 kWh/m²</td>
+                                <td class="px-6 py-4">
+                                    <span class="badge badge-success">优于基准</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="report-card">
+                    <h3 class="subsection-title">能耗总量对比</h3>
+                    <div class="h-80">
+                        <canvas id="energyTotalChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="report-card">
+                    <h3 class="subsection-title">能源结构对比</h3>
+                    <div class="h-80">
+                        <canvas id="energyStructureChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 冷站改造效果 -->
+        <section class="report-section" id="cooling-station">
+            <h2 class="section-title">3. 冷站改造效果</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="report-card">
+                    <h3 class="subsection-title">改造技术方案</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-start">
+                            <div class="bg-primary/10 p-2 rounded-full mr-3">
+                                <i class="fa fa-magnet text-primary"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium">磁悬浮冷水机组更换</h4>
+                                <p class="text-sm text-gray-600">
+                                    将4台传统离心式冷水机组更换为磁悬浮变频冷水机组，单机制冷量提升15%，能效比(EER)从3.8提升至5.2。
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="bg-primary/10 p-2 rounded-full mr-3">
+                                <i class="fa fa-sliders text-primary"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium">水泵变频改造</h4>
+                                <p class="text-sm text-gray-600">
+                                    冷冻水泵、冷却水泵全部加装变频控制器，根据负荷动态调节流量，避免"大马拉小车"现象。
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="bg-primary/10 p-2 rounded-full mr-3">
+                                <i class="fa fa-computer text-primary"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium">智能控制系统</h4>
+                                <p class="text-sm text-gray-600">
+                                    部署冷站群控系统，实时监测负荷变化，优化机组启停策略，实现"最佳能效比"运行模式。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="report-card">
+                    <h3 class="subsection-title">节能效益分析</h3>
+                    <div class="space-y-6">
+                        <div class="metric-card">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="text-sm text-gray-500">年节电量</div>
+                                    <div class="text-2xl font-bold text-dark">320万 kWh</div>
+                                </div>
+                                <div class="bg-success/10 text-success p-3 rounded-lg">
+                                    <i class="fa fa-bolt text-2xl"></i>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-2">折合电费¥256万元/年</div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="text-sm text-gray-500">能效比(EER)</div>
+                                    <div class="text-2xl font-bold text-dark">5.2</div>
+                                </div>
+                                <div class="bg-success/10 text-success p-3 rounded-lg">
+                                    <i class="fa fa-tachometer text-2xl"></i>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-2">超出GB/T 17981标准20%</div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="text-sm text-gray-500">运行电流</div>
+                                    <div class="text-2xl font-bold text-dark">下降38%</div>
+                                </div>
+                                <div class="bg-success/10 text-success p-3 rounded-lg">
+                                    <i class="fa fa-arrow-down text-2xl"></i>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-2">非高峰时段负荷降低30%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="report-card">
+                <h3 class="subsection-title">冷站运行数据对比</h3>
+                <div class="h-80">
+                    <canvas id="coolingStationChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- 热水系统改造 -->
+        <section class="report-section" id="hot-water-system">
+            <h2 class="section-title">4. 热水系统改造</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="report-card">
+                    <h3 class="subsection-title">改造技术方案</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-start">
+                            <div class="bg-secondary/10 p-2 rounded-full mr-3">
+                                <i class="fa fa-bolt text-secondary"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium">空气源热泵替换</h4>
+                                <p class="text-sm text-gray-600">
+                                    拆除3台燃气锅炉，更换为空气源热泵机组，制热COP值从0.9提升至3.8，实现"以电代气"。
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="bg-secondary/10 p-2 rounded-full mr-3">
+                                <i class="fa fa-pipe text-secondary"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium">管道保温升级</h4>
+                                <p class="text-sm text-gray-600">
+                                    对所有热水管道重新做保温处理，采用100mm厚离心玻璃棉+铝皮保护层，热损失率从18%降至5%。
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="bg-secondary/10 p-2 rounded-full mr-3">
+                                <i class="fa fa-thermometer-half text-secondary"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium">恒温控制系统</h4>
+                                <p class="text-sm text-gray-600">
+                                    安装智能恒温控制器，根据用水需求自动调节热泵运行台数，保持55℃供水温度稳定。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="report-card">
+                    <h3 class="subsection-title">节能效益分析</h3>
+                    <div class="space-y-6">
+                        <div class="metric-card">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="text-sm text-gray-500">年节约天然气</div>
+                                    <div class="text-2xl font-bold text-dark">32.5万 m³</div>
+                                </div>
+                                <div class="bg-success/10 text-success p-3 rounded-lg">
+                                    <i class="fa fa-fire text-2xl"></i>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-2">折合费用¥84.5万元/年</div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="text-sm text-gray-500">系统能效(COP)</div>
+                                    <div class="text-2xl font-bold text-dark">3.8</div>
+                                </div>
+                                <div class="bg-success/10 text-success p-3 rounded-lg">
+                                    <i class="fa fa-bolt text-2xl"></i>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-2">较燃气锅炉提升322%</div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="text-sm text-gray-500">管道表面温度</div>
+                                    <div class="text-2xl font-bold text-dark">≤35℃</div>
+                                </div>
+                                <div class="bg-success/10 text-success p-3 rounded-lg">
+                                    <i class="fa fa-thermometer-quarter text-2xl"></i>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-2">热损失率下降13%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 照明系统改造 -->
+        <section class="report-section" id="lighting-system">
+            <h2 class="section-title">5. 照明系统改造</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="report-card">
+                    <h3 class="subsection-title">改造技术方案</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-start">
+                            <div class="bg-accent/10 p-2 rounded-full mr-3">
+                                <i class="fa fa-lightbulb-o text-accent"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium">LED灯具更换</h4>
+                                <p class="text-sm text-gray-600">
+                                    将全院5240套T8荧光灯(36W)更换为18W LED灯具，光效从60lm/W提升至110lm/W，照度提升20%。
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="bg-accent/10 p-2 rounded-full mr-3">
+                                <i class="fa fa-microchip text-accent"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium">智能感应控制</h4>
+                                <p class="text-sm text-gray-600">
+                                    在走廊、楼梯间等公共区域安装微波感应控制器，实现"人来灯亮，人走灯灭"，待机功率≤0.5W/盏。
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="bg-accent/10 p-2 rounded-full mr-3">
+                                <i class="fa fa-sliders text-accent"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium">分区分时控制</h4>
+                                <p class="text-sm text-gray-600">
+                                    按科室功能划分照明控制区域，手术室、ICU等区域设置应急照明模式，非工作时段自动降低照度。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="report-card">
+                    <h3 class="subsection-title">节能效益分析</h3>
+                    <div class="space-y-6">
+                        <div class="metric-card">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="text-sm text-gray-500">年节电量</div>
+                                    <div class="text-2xl font-bold text-dark">450万 kWh</div>
+                                </div>
+                                <div class="bg-success/10 text-success p-3 rounded-lg">
+                                    <i class="fa fa-lightbulb-o text-2xl"></i>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-2">折合电费¥360万元/年</div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="text-sm text-gray-500">功率密度</div>
+                                    <div class="text-2xl font-bold text-dark">8.2 W/m²</div>
+                                </div>
+                                <div class="bg-success/10 text-success p-3 rounded-lg">
+                                    <i class="fa fa-arrows-h text-2xl"></i>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-2">优于GB 50189标准9%</div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="text-sm text-gray-500">照明功率</div>
+                                    <div class="text-2xl font-bold text-dark">下降43%</div>
+                                </div>
+                                <div class="bg-success/10 text-success p-3 rounded-lg">
+                                    <i class="fa fa-arrow-down text-2xl"></i>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-2">非高峰时段节能效果显著</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 投资回报分析 -->
+        <section class="report-section" id="investment-return">
+            <h2 class="section-title">6. 投资回报分析</h2>
+            
+            <div class="report-card">
+                <h3 class="subsection-title">改造项目投资与收益</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="table-header">
+                            <tr>
+                                <th class="px-6 py-3 text-left">改造项目</th>
+                                <th class="px-6 py-3 text-left">改造内容</th>
+                                <th class="px-6 py-3 text-left">投资额(万元)</th>
+                                <th class="px-6 py-3 text-left">年节约费用(万元)</th>
+                                <th class="px-6 py-3 text-left">投资回收期(年)</th>
+                                <th class="px-6 py-3 text-left">CO₂减排(吨/年)</th>
+                                <th class="px-6 py-3 text-left">节能率</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr class="table-row">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="bg-blue-100 p-2 rounded mr-3">
+                                            <i class="fa fa-snowflake-o text-primary"></i>
+                                        </div>
+                                        <span>冷站系统改造</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">磁悬浮冷水机组+变频控制</td>
+                                <td class="px-6 py-4">1200</td>
+                                <td class="px-6 py-4">256</td>
+                                <td class="px-6 py-4">4.7</td>
+                                <td class="px-6 py-4">2500</td>
+                                <td class="px-6 py-4">
+                                    <span class="text-success font-medium">22%</span>
+                                </td>
+                            </tr>
+                            <tr class="table-row">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="bg-green-100 p-2 rounded mr-3">
+                                            <i class="fa fa-tint text-green-600"></i>
+                                        </div>
+                                        <span>热水系统改造</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">空气源热泵+管道保温</td>
+                                <td class="px-6 py-4">320</td>
+                                <td class="px-6 py-4">84.5</td>
+                                <td class="px-6 py-4">3.8</td>
+                                <td class="px-6 py-4">850</td>
+                                <td class="px-6 py-4">
+                                    <span class="text-success font-medium">26%</span>
+                                </td>
+                            </tr>
+                            <tr class="table-row">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="bg-accent-100 p-2 rounded mr-3">
+                                            <i class="fa fa-lightbulb-o text-accent"></i>
+                                        </div>
+                                        <span>照明系统改造</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">LED灯具+智能感应控制</td>
+                                <td class="px-6 py-4">850</td>
+                                <td class="px-6 py-4">360</td>
+                                <td class="px-6 py-4">2.3</td>
+                                <td class="px-6 py-4">3500</td>
+                                <td class="px-6 py-4">
+                                    <span class="text-success font-medium">43%</span>
+                                </td>
+                            </tr>
+                            <tr class="table-row bg-light/50 font-medium">
+                                <td class="px-6 py-4" colspan="2">合计</td>
+                                <td class="px-6 py-4">2370</td>
+                                <td class="px-6 py-4">690.5</td>
+                                <td class="px-6 py-4">3.4</td>
+                                <td class="px-6 py-4">6850</td>
+                                <td class="px-6 py-4">
+                                    <span class="text-success font-medium">25%</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="report-card">
+                <h3 class="subsection-title">投资回报预测</h3>
+                <div class="h-80">
+                    <canvas id="roiChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- 实时监测数据 -->
+        <section class="report-section" id="real-time-monitoring">
+            <h2 class="section-title">7. 实时监测数据</h2>
+            
+            <div class="report-card">
+                <h3 class="subsection-title">改造系统实时运行状态（2025年6月26日 14:00）</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="metric-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="font-medium">冷站系统</h4>
+                            <div class="bg-primary/10 text-primary p-1 rounded">
+                                <i class="fa fa-refresh text-xs"></i> 实时数据
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-500">当前负荷</span>
+                                <span class="font-medium">45%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-primary h-2 rounded-full" style="width: 45%"></div>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-500">能效比(EER)</span>
+                                <span class="font-medium text-success">5.1</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="font-medium">热水系统</h4>
+                            <div class="bg-secondary/10 text-secondary p-1 rounded">
+                                <i class="fa fa-refresh text-xs"></i> 实时数据
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-500">供水温度</span>
+                                <span class="font-medium">55℃</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-secondary h-2 rounded-full" style="width: 100%"></div>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-500">系统COP</span>
+                                <span class="font-medium text-success">3.7</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="font-medium">照明系统</h4>
+                            <div class="bg-accent/10 text-accent p-1 rounded">
+                                <i class="fa fa-refresh text-xs"></i> 实时数据
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-500">全院照明功率</span>
+                                <span class="font-medium">102 kW</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-accent h-2 rounded-full" style="width: 58%"></div>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-500">较改造前</span>
+                                <span class="font-medium text-success">↓43%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 附录 -->
+        <section class="report-section" id="appendix">
+            <h2 class="section-title">8. 附录</h2>
+            
+            <div class="report-card">
+                <h3 class="subsection-title">相关文件与数据</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white border border-gray-200 rounded-lg p-4 flex items-center hover:shadow-md transition-shadow">
+                        <div class="bg-blue-100 p-3 rounded-lg mr-4">
+                            <i class="fa fa-file-excel-o text-blue-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium">能耗数据明细表</div>
+                            <div class="text-sm text-gray-500">改造前后对比(2022-2025)</div>
+                        </div>
+                    </div>
+                    <div class="bg-white border border-gray-200 rounded-lg p-4 flex items-center hover:shadow-md transition-shadow">
+                        <div class="bg-green-100 p-3 rounded-lg mr-4">
+                            <i class="fa fa-file-pdf-o text-green-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium">设备测试报告</div>
+                            <div class="text-sm text-gray-500">冷站/热水/照明系统</div>
+                        </div>
+                    </div>
+                    <div class="bg-white border border-gray-200 rounded-lg p-4 flex items-center hover:shadow-md transition-shadow">
+                        <div class="bg-purple-100 p-3 rounded-lg mr-4">
+                            <i class="fa fa-file-text-o text-purple-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium">改造工程验收报告</div>
+                            <div class="text-sm text-gray-500">2025年5月</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <section class="section-break"></section>
+
+   
+
+
+    <!-- 白皮书结尾 -->
+    <footer class="whitepaper-footer">
+        <div class="footer-content">
+            <div class="footer-logo">
+                <i class="fa fa-hospital-o text-3xl text-primary mr-2"></i>
+                <span class="text-xl font-semibold text-primary">佛山市第三人民医院</span>
+            </div>
+            <div class="footer-divider"></div>
+            <div class="footer-text">
+                基于医院能耗监测平台数据编制，客观反映冷站、热水和照明系统节能改造效果。报告遵循《能源审计技术通则》(GB/T 17166-2019)、《公共建筑节能设计标准》(GB 50189-2015)等国家标准，为医院节能改造提供科学评估与决策参考。
+            </div>
+            <div class="footer-meta">
+                <div>深圳市紫衡技术有限公司</div>
+                <div>0755-86369127</div>
+             
+                <div>©2022深圳市紫衡技术有限公司 版权所有 粤ICP备10072083号</div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // 初始化图表
+        document.addEventListener('DOMContentLoaded', function() {
+            // 能耗总量对比图表
+            const totalCtx = document.getElementById('energyTotalChart').getContext('2d');
+            new Chart(totalCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['2022', '2023', '2024(改造前)', '2025(改造后)'],
+                    datasets: [
+                        {
+                            label: '电力(kWh)',
+                            data: [30500000, 29600000, 28650000, 21480000],
+                            backgroundColor: [
+                                'rgba(26, 54, 93, 0.7)',
+                                'rgba(26, 54, 93, 0.7)',
+                                'rgba(26, 54, 93, 0.7)',
+                                'rgba(43, 108, 176, 0.7)'
+                            ],
+                            borderWidth: 0,
+                            borderRadius: 4
+                        },
+                        {
+                            label: '天然气(m³)',
+                            data: [1150000, 1180000, 1250000, 925000],
+                            backgroundColor: [
+                                'rgba(45, 55, 72, 0.7)',
+                                'rgba(45, 55, 72, 0.7)',
+                                'rgba(45, 55, 72, 0.7)',
+                                'rgba(43, 108, 176, 0.7)'
+                            ],
+                            borderWidth: 0,
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.label}: ${context.raw.toLocaleString()}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 能源结构对比图表
+            const structureCtx = document.getElementById('energyStructureChart').getContext('2d');
+            new Chart(structureCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['电力', '天然气', '水', '其他'],
+                    datasets: [
+                        {
+                            label: '改造前能源结构',
+                            data: [65, 25, 8, 2],
+                            backgroundColor: [
+                                '#1a365d',
+                                '#2d3748',
+                                '#4a5568',
+                                '#a0aec0'
+                            ],
+                            borderWidth: 0
+                        },
+                        {
+                            label: '改造后能源结构',
+                            data: [58, 20, 18, 4],
+                            backgroundColor: [
+                                '#2b6cb0',
+                                '#2d3748',
+                                '#4a5568',
+                                '#a0aec0'
+                            ],
+                            borderWidth: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.label}: ${context.raw}%`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '65%'
+                }
+            });
+
+            // 冷站运行数据对比图表
+            const coolingCtx = document.getElementById('coolingStationChart').getContext('2d');
+            new Chart(coolingCtx, {
+                type: 'line',
+                data: {
+                    labels: ['1月', '2月', '3月', '4月', '5月', '6月'],
+                    datasets: [
+                        {
+                            label: '改造前能耗(kWh)',
+                            data: [2400000, 2200000, 2350000, 2450000, 2500000, 2600000],
+                            borderColor: '#1a365d',
+                            backgroundColor: 'rgba(26, 54, 93, 0.1)',
+                            tension: 0.3,
+                            fill: true,
+                            borderDash: [5, 5]
+                        },
+                        {
+                            label: '改造后能耗(kWh)',
+                            data: [2400000, 2200000, 2100000, 1900000, 1850000, 1750000],
+                            borderColor: '#2b6cb0',
+                            backgroundColor: 'rgba(43, 108, 176, 0.1)',
+                            tension: 0.3,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString() + ' kWh';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 投资回报图表
+            const roiCtx = document.getElementById('roiChart').getContext('2d');
+            new Chart(roiCtx, {
+                type: 'line',
+                data: {
+                    labels: ['第0年', '第1年', '第2年', '第3年', '第4年', '第5年'],
+                    datasets: [
+                        {
+                            label: '累计投资(万元)',
+                            data: [2370, 2370, 2370, 2370, 2370, 2370],
+                            borderColor: '#ed8936',
+                            backgroundColor: 'rgba(237, 137, 54, 0.1)',
+                            tension: 0,
+                            fill: true
+                        },
+                        {
+                            label: '累计收益(万元)',
+                            data: [0, 690.5, 1381, 2071.5, 2762, 3452.5],
+                            borderColor: '#2b6cb0',
+                            backgroundColor: 'rgba(43, 108, 176, 0.1)',
+                            tension: 0.3,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.label}: ${context.raw.toLocaleString()}万元`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString() + '万元';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+        // 平滑滚动
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
