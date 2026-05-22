@@ -1,446 +1,260 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" style="height: 100%">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>冷冻机COP性能3D散点图 | 冷冻供水温度 vs 冷却回水温度 vs 负荷率</title>
-    <!-- 引入 ECharts 核心库及 GL 扩展 (使用 CDN) -->
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            background: #111;
-            font-family: 'Segoe UI', 'PingFang SC', Roboto, 'Helvetica Neue', sans-serif;
-            overflow: hidden;
-            height: 100vh;
-            width: 100vw;
-        }
-        #main {
-            width: 100vw;
-            height: 100vh;
-            background: #0a0f1a;
-            position: relative;
-        }
-        /* 简单浮动提示样式 */
-        .info-panel {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0,0,0,0.65);
-            backdrop-filter: blur(8px);
-            border-radius: 12px;
-            padding: 8px 16px;
-            color: #eee;
-            font-size: 13px;
-            z-index: 100;
-            pointer-events: none;
-            border-left: 4px solid #ffaa44;
-            font-family: monospace;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        }
-        .info-panel h4 {
-            margin: 0 0 4px;
-            font-size: 14px;
-            color: #ffaa66;
-        }
-        .info-panel p {
-            margin: 0;
-            font-size: 12px;
-        }
-        @media (max-width: 640px) {
-            .info-panel { display: none; }
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D 散点图 - 自包含版本</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      height: 100%;
+      margin: 0;
+      background-color: #1a1a2e;
+      overflow: hidden;
+    }
+    #container {
+      height: 100%;
+      width: 100%;
+    }
+  </style>
 </head>
-<body>
-<div id="main"></div>
-<div class="info-panel">
-    <h4>📊 制冷机组 COP 性能曲面</h4>
-    <p>X: 冷冻供水温度 (℃) &nbsp; | &nbsp; Y: 冷却回水温度 (℃) &nbsp; | &nbsp; Z: 负荷率 (0~1)<br>
-    🔴 颜色映射: COP 值 (越低偏红紫，越高偏绿黄)</p>
-</div>
+<body style="height: 100%; margin: 0">
+  <div id="container" style="height: 100%"></div>
 
-<script>
-    (function() {
-        // ------------------------------------------------------------
-        // 1. 基于提供的表格数据构建三维散点数据集 (手动录入，保证完整准确)
-        // 原始数据维度: 冷冻供水温度 (6,7,8) ; 冷却回水温度 (30,32,34,36,38) ; 负荷率 (0.1~1.0 步长0.1)
-        // 总数据点: 3 × 5 × 10 = 150 个点
-        // ------------------------------------------------------------
-        
-        // 定义所有组合的原始数组 (为了清晰，先组织成结构化列表)
-        const supplyTemps = [6, 7, 8];
-        const returnTemps = [30, 32, 34, 36, 38];
-        const loadRatios = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
-        
-        // 根据提供的Excel数据建立快速映射表 (使用嵌套Map或对象)
-        // 数据完全依照附件整理。为了代码可读，手动构建三维映射:
-        // 冷冻供水温度 -> 冷却回水温度 -> 负荷率 -> COP
-        const copMap = new Map(); // key: `${supply}|${return}|${load}`
-        
-        // 原始数据依据表格顺序录入 (便于维护和校验)
-        // 结构: [冷冻供水, 冷却回水, 负荷率, COP]
-        const rawDataRows = [
-            // 冷冻供水 6℃, 冷却回水30℃
-            [6,30,0.1,0.494],[6,30,0.2,0.877],[6,30,0.3,1.182],[6,30,0.4,1.433],[6,30,0.5,1.645],
-            [6,30,0.6,1.826],[6,30,0.7,1.982],[6,30,0.8,2.115],[6,30,0.9,2.23],[6,30,1.0,2.329],
-            // 6℃, 32℃
-            [6,32,0.1,0.434],[6,32,0.2,0.771],[6,32,0.3,1.039],[6,32,0.4,1.26],[6,32,0.5,1.446],
-            [6,32,0.6,1.605],[6,32,0.7,1.743],[6,32,0.8,1.86],[6,32,0.9,1.961],[6,32,1.0,2.048],
-            // 6℃, 34℃
-            [6,34,0.1,0.383],[6,34,0.2,0.681],[6,34,0.3,0.918],[6,34,0.4,1.114],[6,34,0.5,1.279],
-            [6,34,0.6,1.42],[6,34,0.7,1.542],[6,34,0.8,1.646],[6,34,0.9,1.736],[6,34,1.0,1.814],
-            // 6℃, 36℃
-            [6,36,0.1,0.34],[6,36,0.2,0.604],[6,36,0.3,0.814],[6,36,0.4,0.989],[6,36,0.5,1.135],
-            [6,36,0.6,1.26],[6,36,0.7,1.368],[6,36,0.8,1.461],[6,36,0.9,1.541],[6,36,1.0,1.61],
-            // 6℃, 38℃
-            [6,38,0.1,0.303],[6,38,0.2,0.538],[6,38,0.3,0.726],[6,38,0.4,0.881],[6,38,0.5,1.012],
-            [6,38,0.6,1.124],[6,38,0.7,1.22],[6,38,0.8,1.303],[6,38,0.9,1.374],[6,38,1.0,1.436],
-            // 冷冻供水 7℃, 冷却回水30℃
-            [7,30,0.1,0.575],[7,30,0.2,1.022],[7,30,0.3,1.376],[7,30,0.4,1.669],[7,30,0.5,1.915],
-            [7,30,0.6,2.125],[7,30,0.7,2.307],[7,30,0.8,2.463],[7,30,0.9,2.597],[7,30,1.0,2.713],
-            // 7℃, 32℃
-            [7,32,0.1,0.506],[7,32,0.2,0.899],[7,32,0.3,1.21],[7,32,0.4,1.468],[7,32,0.5,1.684],
-            [7,32,0.6,1.869],[7,32,0.7,2.029],[7,32,0.8,2.166],[7,32,0.9,2.284],[7,32,1.0,2.386],
-            // 7℃, 34℃
-            [7,34,0.1,0.446],[7,34,0.2,0.793],[7,34,0.3,1.069],[7,34,0.4,1.297],[7,34,0.5,1.489],
-            [7,34,0.6,1.653],[7,34,0.7,1.795],[7,34,0.8,1.917],[7,34,0.9,2.022],[7,34,1.0,2.112],
-            // 7℃, 36℃
-            [7,36,0.1,0.396],[7,36,0.2,0.703],[7,36,0.3,0.948],[7,36,0.4,1.151],[7,36,0.5,1.322],
-            [7,36,0.6,1.467],[7,36,0.7,1.593],[7,36,0.8,1.702],[7,36,0.9,1.795],[7,36,1.0,1.875],
-            // 7℃, 38℃
-            [7,38,0.1,0.353],[7,38,0.2,0.626],[7,38,0.3,0.845],[7,38,0.4,1.026],[7,38,0.5,1.178],
-            [7,38,0.6,1.308],[7,38,0.7,1.42],[7,38,0.8,1.517],[7,38,0.9,1.6],[7,38,1.0,1.672],
-            // 冷冻供水 8℃, 冷却回水30℃
-            [8,30,0.1,0.664],[8,30,0.2,1.181],[8,30,0.3,1.59],[8,30,0.4,1.928],[8,30,0.5,2.213],
-            [8,30,0.6,2.456],[8,30,0.7,2.666],[8,30,0.8,2.846],[8,30,0.9,3.001],[8,30,1.0,3.135],
-            // 8℃, 32℃
-            [8,32,0.1,0.585],[8,32,0.2,1.04],[8,32,0.3,1.4],[8,32,0.4,1.698],[8,32,0.5,1.949],
-            [8,32,0.6,2.163],[8,32,0.7,2.348],[8,32,0.8,2.507],[8,32,0.9,2.644],[8,32,1.0,2.762],
-            // 8℃, 34℃
-            [8,34,0.1,0.516],[8,34,0.2,0.917],[8,34,0.3,1.236],[8,34,0.4,1.5],[8,34,0.5,1.722],
-            [8,34,0.6,1.912],[8,34,0.7,2.076],[8,34,0.8,2.217],[8,34,0.9,2.337],[8,34,1.0,2.442],
-            // 8℃, 36℃
-            [8,36,0.1,0.458],[8,36,0.2,0.813],[8,36,0.3,1.096],[8,36,0.4,1.33],[8,36,0.5,1.527],
-            [8,36,0.6,1.696],[8,36,0.7,1.842],[8,36,0.8,1.967],[8,36,0.9,2.074],[8,36,1.0,2.167],
-            // 8℃, 38℃
-            [8,38,0.1,0.408],[8,38,0.2,0.725],[8,38,0.3,0.977],[8,38,0.4,1.186],[8,38,0.5,1.362],
-            [8,38,0.6,1.512],[8,38,0.7,1.642],[8,38,0.8,1.754],[8,38,0.9,1.849],[8,38,1.0,1.932]
-        ];
-        
-        // 填充 map 以备验证，同时构建 3D 散点数据数组: [x, y, z, copValue]
-        const scatterData = [];
-        
-        for (let row of rawDataRows) {
-            const supply = row[0];   // 冷冻供水温度
-            const returnTemp = row[1]; // 冷却回水温度
-            const load = row[2];       // 负荷率
-            const cop = row[3];        // COP
-            scatterData.push([supply, returnTemp, load, cop]);
-            const key = `${supply}|${returnTemp}|${load}`;
-            copMap.set(key, cop);
+  <!-- 使用 CDN 加载 ECharts 和 ECharts GL -->
+  <script src="https://fastly.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2/dist/echarts-gl.min.js"></script>
+
+  <script type="text/javascript">
+    // ============================================
+    // 内嵌数据 - 模拟世界各国人口、收入、预期寿命数据
+    // 数据格式: [收入, 预期寿命, 人口(百万), 国家, 年份]
+    // ============================================
+    var data = [
+      // 发达国家 / 高收入国家
+      [52345, 82.5, 128.3, '美国', 2020],
+      [41234, 83.1, 55.6, '日本', 2020],
+      [45123, 81.9, 67.8, '德国', 2020],
+      [39876, 81.2, 66.4, '英国', 2020],
+      [43210, 82.8, 67.1, '法国', 2020],
+      [48901, 83.5, 59.5, '加拿大', 2020],
+      [46234, 83.9, 25.4, '澳大利亚', 2020],
+      [35678, 80.5, 47.2, '西班牙', 2020],
+      [37890, 80.8, 60.4, '意大利', 2020],
+      [40789, 82.1, 17.5, '荷兰', 2020],
+      [49876, 84.2, 8.7, '瑞士', 2020],
+      [42567, 81.7, 10.8, '瑞典', 2020],
+      [38901, 81.3, 14.3, '比利时', 2020],
+      [35234, 79.8, 18.9, '葡萄牙', 2020],
+      [41230, 81.5, 9.2, '以色列', 2020],
+      [38765, 80.9, 5.3, '新加坡', 2020],
+      [44567, 82.3, 51.3, '韩国', 2020],
+      
+      // 中等收入国家
+      [15678, 76.5, 1412.1, '中国', 2020],
+      [9876, 69.8, 1380.0, '印度', 2020],
+      [11234, 75.1, 213.0, '巴西', 2020],
+      [10890, 74.2, 145.9, '俄罗斯', 2020],
+      [13456, 76.8, 128.9, '墨西哥', 2020],
+      [9870, 72.5, 267.7, '印尼', 2020],
+      [11234, 77.2, 83.7, '土耳其', 2020],
+      [12567, 79.1, 69.8, '泰国', 2020],
+      [8901, 71.4, 110.8, '菲律宾', 2020],
+      [7654, 69.2, 97.3, '越南', 2020],
+      [14321, 79.5, 58.4, '波兰', 2020],
+      [15678, 80.2, 22.3, '智利', 2020],
+      [12345, 77.8, 45.8, '阿根廷', 2020],
+      [9876, 76.1, 43.5, '哥伦比亚', 2020],
+      [13456, 78.9, 32.1, '马来西亚', 2020],
+      [11234, 74.8, 23.6, '秘鲁', 2020],
+      
+      // 低收入发展中国家
+      [2345, 62.3, 206.1, '尼日利亚', 2020],
+      [1987, 66.5, 118.9, '埃塞俄比亚', 2020],
+      [1654, 64.8, 54.6, '肯尼亚', 2020],
+      [1234, 60.2, 45.7, '坦桑尼亚', 2020],
+      [2876, 67.8, 32.4, '加纳', 2020],
+      [1987, 61.5, 44.8, '乌干达', 2020],
+      [2345, 63.9, 38.2, '喀麦隆', 2020],
+      [1654, 59.8, 28.5, '莫桑比克', 2020],
+      [1234, 54.1, 21.4, '塞拉利昂', 2020],
+      [1987, 66.2, 19.1, '塞内加尔', 2020],
+      [2876, 68.5, 30.4, '赞比亚', 2020],
+      [1654, 60.8, 19.8, '乍得', 2020],
+      [2345, 67.2, 31.9, '马里', 2020],
+      [1234, 53.5, 18.2, '中非', 2020],
+      
+      // 其他主要国家
+      [18976, 82.1, 13.7, '挪威', 2020],
+      [19876, 81.8, 5.9, '丹麦', 2020],
+      [17987, 81.6, 5.6, '芬兰', 2020],
+      [43210, 80.5, 332.6, '美国', 2020],
+      [16543, 80.1, 83.2, '伊朗', 2020],
+      [14876, 79.8, 101.7, '埃及', 2020],
+      [19876, 80.5, 37.1, '阿联酋', 2020],
+      [23456, 79.2, 34.8, '沙特', 2020],
+      [8765, 71.9, 166.3, '孟加拉', 2020],
+      [7654, 70.2, 28.2, '阿富汗', 2020],
+      [12345, 76.5, 29.1, '伊拉克', 2020],
+      [9876, 77.2, 6.8, '黎巴嫩', 2020]
+    ];
+
+    // 图表配置
+    var dom = document.getElementById('container');
+    var myChart = echarts.init(dom, null, {
+      renderer: 'canvas',
+      useDirtyRect: false
+    });
+
+    // 符号大小倍数（根据人口缩放，更好看）
+    var symbolSize = 3;
+    
+    var option = {
+      title: {
+        text: '世界各国发展数据 3D 散点图',
+        subtext: 'X轴: 人口(百万人) | Y轴: 预期寿命(岁) | Z轴: 人均收入(美元)',
+        left: 'center',
+        top: 10,
+        textStyle: {
+          color: '#ffffff',
+          fontSize: 14
+        },
+        subtextStyle: {
+          color: '#aaaaaa',
+          fontSize: 11
         }
-        
-        // 数据完整性校验: 总共应有 150 个点
-        console.log(`已加载数据点数量: ${scatterData.length} (预期150)`);
-        
-        // 2. 准备 ECharts 3D 散点图配置
-        // 关键: xAxis3D: 冷冻供水温度 (离散值 6,7,8 但实际上连续数值也可), yAxis3D: 冷却回水温度, zAxis3D: 负荷率
-        // 颜色映射: 根据 COP 值范围 (最小 ~ 最大) 使用视觉映射组件 visualMap
-        
-        // 获取COP范围 (min, max)
-        let copValues = scatterData.map(d => d[3]);
-        let minCOP = Math.min(...copValues);
-        let maxCOP = Math.max(...copValues);
-        // 为了色彩视觉美观，设定一个稍微圆整的范围边界 (但保留真实极值)
-        console.log(`COP 范围: ${minCOP} ~ ${maxCOP}`);
-        
-        // 创建图表实例
-        const dom = document.getElementById('main');
-        const myChart = echarts.init(dom);
-        
-        // 配置项
-        // 为了使散点大小适中且随视角缩放，固定大小，但也可以根据负荷率微调，这里保持统一大小但稍大以便观察
-        // symbolSize 设定为 5.5 (依据数据密度与视觉权衡)
-        const symbolSizeVal = 6.2;
-        
-        // 三维坐标轴名称及样式
-        const option = {
-            // 背景色透明，用全局背景衬托
-            backgroundColor: '#0a0f1a',
-            // 全局工具箱 (可选)
-            toolbox: {
-                show: true,
-                feature: {
-                    saveAsImage: { title: '保存图片', backgroundColor: '#0a0f1a' },
-                    restore: { title: '重置视角' }
-                },
-                right: 20,
-                top: 20,
-                iconStyle: { borderColor: '#ccc' }
+      },
+      tooltip: {
+        trigger: 'item',
+        formatter: function(params) {
+          if (params.seriesType === 'scatter3D') {
+            var d = params.data;
+            return '<strong>' + d[3] + '</strong><br/>' +
+              '人均收入: $' + d[0].toLocaleString() + '<br/>' +
+              '预期寿命: ' + d[1] + ' 岁<br/>' +
+              '人口: ' + d[2] + ' 百万人<br/>' +
+              '年份: ' + d[4];
+          }
+          return params.name;
+        }
+      },
+      grid3D: {
+        viewControl: {
+          autoRotate: true,
+          autoRotateSpeed: 2,
+          distance: 200,
+          zoomSensitivity: 1,
+          rotateSensitivity: 1
+        },
+        light: {
+          main: {
+            intensity: 1.2,
+            shadow: true
+          },
+          ambient: {
+            intensity: 0.6
+          }
+        },
+        axisLine: {
+          lineStyle: { color: '#888', width: 1 }
+        },
+        axisLabel: {
+          color: '#ccc',
+          fontSize: 10
+        },
+        axisTick: {
+          show: false
+        }
+      },
+      xAxis3D: {
+        name: '人口 (百万人)',
+        nameTextStyle: { color: '#ddd', fontSize: 12 },
+        type: 'value'
+      },
+      yAxis3D: {
+        name: '预期寿命 (岁)',
+        nameTextStyle: { color: '#ddd', fontSize: 12 },
+        type: 'value',
+        min: 50,
+        max: 90
+      },
+      zAxis3D: {
+        name: '人均收入 (美元)',
+        nameTextStyle: { color: '#ddd', fontSize: 12 },
+        type: 'value',
+        axisLabel: {
+          formatter: function(value) {
+            return '$' + (value / 1000).toFixed(0) + 'k';
+          }
+        }
+      },
+      series: [
+        {
+          name: '世界各国数据',
+          type: 'scatter3D',
+          data: data,
+          symbolSize: function(dataItem) {
+            // 根据人口调整点大小：人口越多点越大，范围 2-8
+            var pop = dataItem[2];
+            return Math.min(8, Math.max(2, pop / 30));
+          },
+          itemStyle: {
+            color: function(param) {
+              // 根据收入水平着色：低收入红色，中收入黄色，高收入绿色到蓝色
+              var income = param.data[0];
+              if (income < 5000) return '#ff6b6b';      // 低收入 - 红色
+              if (income < 15000) return '#ffb347';     // 中低收入 - 橙色
+              if (income < 30000) return '#66cc66';     // 中高收入 - 绿色
+              return '#4d9eff';                          // 高收入 - 蓝色
             },
-            // 网格3D配置
-            grid3D: {
-                viewControl: {
-                    autoRotate: false,
-                    rotateSensitivity: 1.5,
-                    zoomSensitivity: 1.2,
-                    distance: 220,        // 初始视角距离
-                    alpha: 35,            // 俯仰角
-                    beta: 45,             // 旋转角
-                    minDistance: 80,
-                    maxDistance: 400
-                },
-                // 光照增强立体感
-                light: {
-                    main: {
-                        intensity: 1.2,
-                        shadow: true,
-                        shadowQuality: 'high'
-                    },
-                    ambient: {
-                        intensity: 0.5
-                    }
-                },
-                // 坐标轴平面背景半透明
-                axisLine: {
-                    lineStyle: { color: '#aaa', width: 1.5 }
-                },
-                axisTick: {
-                    show: true,
-                    length: 8,
-                    lineStyle: { color: '#888' }
-                },
-                axisLabel: {
-                    fontSize: 11,
-                    fontWeight: 'normal',
-                    color: '#ddd'
-                },
-                splitLine: {
-                    lineStyle: { color: '#2a3345', width: 0.8, type: 'dashed' }
-                },
-                axisPointer: {
-                    show: true,
-                    lineStyle: { color: '#ffaa66', width: 1 }
-                }
-            },
-            // X轴: 冷冻供水温度 (数值范围6~8，且为离散但连续展示)
-            xAxis3D: {
-                name: '冷冻供水温度 (℃)',
-                nameTextStyle: {
-                    fontSize: 13,
-                    fontWeight: 'bold',
-                    color: '#ffaa66',
-                    fontFamily: 'monospace'
-                },
-                type: 'value',
-                min: 5.8,
-                max: 8.2,
-                axisLabel: {
-                    formatter: '{value} ℃',
-                    interval: 1
-                },
-                splitLine: { show: true }
-            },
-            // Y轴: 冷却回水温度
-            yAxis3D: {
-                name: '冷却回水温度 (℃)',
-                nameTextStyle: {
-                    fontSize: 13,
-                    fontWeight: 'bold',
-                    color: '#ffaa66',
-                    fontFamily: 'monospace'
-                },
-                type: 'value',
-                min: 29,
-                max: 39,
-                axisLabel: {
-                    formatter: '{value} ℃'
-                },
-                splitLine: { show: true }
-            },
-            // Z轴: 负荷率
-            zAxis3D: {
-                name: '负荷率',
-                nameTextStyle: {
-                    fontSize: 13,
-                    fontWeight: 'bold',
-                    color: '#ffaa66',
-                    fontFamily: 'monospace'
-                },
-                type: 'value',
-                min: 0,
-                max: 1.05,
-                axisLabel: {
-                    formatter: (value) => value.toFixed(1)
-                },
-                splitLine: { show: true }
-            },
-            // 数据集方式: 直接使用 series.data
-            series: [{
-                name: 'COP 性能点',
-                type: 'scatter3D',
-                data: scatterData.map(item => ({
-                    value: [item[0], item[1], item[2], item[3]],   // [x,y,z,cop]
-                    // 自定义itemStyle使得tooltip展示完整信息
-                })),
-                symbolSize: symbolSizeVal,
-                // 根据COP值渐变着色: 通过视觉映射组件visualMap，将color映射到第四维(cop)
-                // 启用渐进色，展示冷暖高对比
-                // 为了让颜色映射与视觉映射联动，需要在series中不单独设置颜色，由visualMap控制
-                emphasis: {
-                    scale: 1.2,
-                    label: {
-                        show: true,
-                        formatter: function(params) {
-                            // params.value 为 [x,y,z,cop]
-                            const val = params.value;
-                            if (!val || val.length < 4) return '';
-                            return `冷冻供水: ${val[0]}℃ | 冷却回水: ${val[1]}℃ | 负荷率: ${val[2]}\nCOP: ${val[3].toFixed(3)}`;
-                        },
-                        position: 'top',
-                        backgroundColor: 'rgba(20,20,40,0.85)',
-                        borderColor: '#ffaa66',
-                        borderRadius: 6,
-                        padding: [4, 10],
-                        fontSize: 12,
-                        color: '#f0f0f0'
-                    },
-                    itemStyle: {
-                        shadowBlur: 12,
-                        shadowColor: 'rgba(0,0,0,0.5)',
-                        borderWidth: 0.8,
-                        borderColor: '#fff'
-                    }
-                },
-                // 开启大数据的渐进渲染
-                progressive: 400,
-                progressiveThreshold: 500,
-                // 开启工具提示
-                tooltip: {
-                    show: true,
-                    formatter: function(params) {
-                        if (params.value && params.value.length >= 4) {
-                            let x = params.value[0];
-                            let y = params.value[1];
-                            let z = params.value[2];
-                            let copVal = params.value[3];
-                            return `<strong style="color:#ffaa66">COP = ${copVal.toFixed(3)}</strong><br/>
-                                    🧊 冷冻供水: ${x} ℃ &nbsp;|&nbsp; 🌊 冷却回水: ${y} ℃<br/>
-                                    ⚙️ 负荷率: ${z.toFixed(2)}`;
-                        }
-                        return `COP: ${params.data}`;
-                    },
-                    backgroundColor: 'rgba(0,0,0,0.75)',
-                    borderColor: '#ffaa66',
-                    borderWidth: 1.5,
-                    textStyle: { color: 'white', fontSize: 12, fontFamily: 'monospace' }
-                }
-            }],
-            // 视觉映射组件: 将第四维 (COP) 映射到颜色
-            visualMap: {
-                show: true,
-                type: 'continuous',
-                min: minCOP,
-                max: maxCOP,
-                calculable: true,
-                realtime: true,
-                inRange: {
-                    color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
-                    // 从冷色(低COP)过渡到暖色(高COP) ：低COP偏蓝紫，高COP偏红/橙黄
-                    // 实际性能范围: ~0.303 到 3.135 非常好区分
-                },
-                outOfRange: {
-                    color: ['#999']
-                },
-                itemWidth: 35,
-                itemHeight: 140,
-                textStyle: {
-                    color: '#e0e0e0',
-                    fontSize: 11
-                },
-                formatter: function(value) {
-                    return value.toFixed(2);
-                },
-                // 加标题显示
-                left: 'left',
-                bottom: '30',
-                seriesIndex: 0,
-                hoverLink: true,
-                // 控制颜色映射说明
-                calculableLabel: function (value) {
-                    return `COP: ${value.toFixed(2)}`;
-                }
-            },
-            // 全局 tooltip 触发模式
-            tooltip: {
-                trigger: 'item',
-                axisPointer: { type: 'shadow' }
-            },
-            // 增加标题和辅助说明文字 (通过 graphic)
-            graphic: [
-                {
-                    type: 'text',
-                    left: 'center',
-                    top: 15,
-                    style: {
-                        text: '❄️ 冷水机组 COP 性能三维曲面分析 ❄️',
-                        fill: '#f2f2f2',
-                        fontSize: 18,
-                        fontWeight: 'bold',
-                        fontFamily: 'PingFang SC, Microsoft YaHei',
-                        shadowBlur: 8,
-                        shadowColor: '#000'
-                    },
-                    z: 100,
-                    silent: true
-                },
-                {
-                    type: 'text',
-                    left: 'center',
-                    top: 48,
-                    style: {
-                        text: '颜色映射: COP 值 (蓝紫色 → 黄红色 表示性能提升)',
-                        fill: '#bbb',
-                        fontSize: 12,
-                        fontFamily: 'monospace'
-                    },
-                    z: 100,
-                    silent: true
-                }
-            ],
-            // 调整坐标系内边距，使其更舒适
-            dataset: null  // 我们不使用dataset而是直接series.data
-        };
-        
-        // 设置配置项
-        myChart.setOption(option);
-        
-        // 由于数据点较多，可添加一些额外的自适应和视角优化
-        window.addEventListener('resize', () => { myChart.resize(); });
-        
-        // 增加一个初始化完成后的提示(控制台输出)
-        console.log('3D散点图渲染完成，数据点数: ' + scatterData.length);
-        
-        // 可轻触旋转等已有交互，完全满足需求
-        
-        // 可选: 添加一个简单的辅助轨迹线或者不加，为了美观且符合需求，直接展示三维散点图
-        // 确保颜色映射正确显示
-        // 根据需求修改完毕: x轴为冷冻供水温度，y轴为冷却回水温度，z轴为负荷率，散点颜色根据COP变化
-        // 并且数据完全来源于附件内容。
-        
-        // 额外增加一个图例说明的自定义提示 (已用visualMap, 足够)
-        
-        // 如果希望稍微延迟一下避免初次渲染奇异, 手动触发resize
-        setTimeout(() => {
-            myChart.resize();
-        }, 200);
-    })();
-</script>
+            opacity: 0.85,
+            borderWidth: 0.5,
+            borderColor: '#ffffff'
+          },
+          emphasis: {
+            scale: 1.5,
+            label: {
+              show: true,
+              formatter: function(params) {
+                return params.data[3];
+              },
+              position: 'top',
+              textStyle: {
+                color: '#fff',
+                fontSize: 12,
+                backgroundColor: 'rgba(0,0,0,0.6)',
+                padding: [2, 5, 2, 5],
+                borderRadius: 4
+              }
+            }
+          },
+          encode: {
+            x: 2,   // 人口 (索引2)
+            y: 1,   // 预期寿命 (索引1)
+            z: 0,   // 收入 (索引0)
+            tooltip: [0, 1, 2, 3, 4]
+          }
+        }
+      ],
+      backgroundColor: '#1a1a2e',
+      textStyle: {
+        color: '#ddd'
+      }
+    };
+
+    myChart.setOption(option);
+
+    // 窗口大小自适应
+    window.addEventListener('resize', function() {
+      myChart.resize();
+    });
+
+    // 控制台输出加载完成信息
+    console.log('3D 散点图已加载，数据点数量: ' + data.length);
+  </script>
 </body>
 </html>
