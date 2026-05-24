@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>冷冻机COP性能3D气泡图 | 气泡大小+颜色双映射COP</title>
+    <title>COP性能气泡图 | 红黄绿蓝渐变 + 大小双映射</title>
     <!-- 引入 ECharts 核心库及 GL 扩展 -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
@@ -14,7 +14,7 @@
             box-sizing: border-box;
         }
         body {
-            background: #f5f7fb;  /* 浅色背景整体基调 */
+            background: #f5f7fb;
             font-family: 'Segoe UI', 'PingFang SC', Roboto, 'Helvetica Neue', sans-serif;
             overflow: hidden;
             height: 100vh;
@@ -23,57 +23,13 @@
         #main {
             width: 100vw;
             height: 100vh;
-            background: #fefefe;  /* 浅色画布背景 */
+            background: #fefefe;
             position: relative;
-            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
-        }
-        /* 信息面板浅色风格 */
-        .info-panel {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(255,255,240,0.92);
-            backdrop-filter: blur(6px);
-            border-radius: 16px;
-            padding: 12px 20px;
-            color: #1e2a3a;
-            z-index: 100;
-            pointer-events: none;
-            border-left: 5px solid #3b82f6;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            font-family: monospace;
-            font-weight: 500;
-        }
-        .info-panel h4 {
-            margin: 0 0 6px;
-            font-size: 15px;
-            color: #1e40af;
-        }
-        .info-panel p {
-            margin: 0;
-            font-size: 12px;
-            line-height: 1.4;
-        }
-        .info-panel .legend-tag {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 6px;
-        }
-        @media (max-width: 640px) {
-            .info-panel { display: none; }
         }
     </style>
 </head>
 <body>
 <div id="main"></div>
-<div class="info-panel">
-    <h4>🔵 双变量编码 COP 性能气泡图</h4>
-    <p><span class="legend-tag" style="background: #3b82f6;"></span> 最大COP → 蓝色 + 大气泡 &nbsp;&nbsp;|&nbsp;&nbsp;
-       <span class="legend-tag" style="background: #ef4444;"></span> 最小COP → 红色 + 小气泡<br>
-    📍 X: 冷冻供水温度(℃) &nbsp; Y: 冷却回水温度(℃) &nbsp; Z: 负荷率 &nbsp; 🎨 颜色+大小 = COP值</p>
-</div>
 
 <script>
     (function() {
@@ -134,11 +90,7 @@
         const minCOP = Math.min(...copList);   // 约 0.303
         const maxCOP = Math.max(...copList);   // 约 3.135
         
-        console.log(`COP 范围: ${minCOP} ～ ${maxCOP}`);
-        
-        // 构建散点数据数组，每个点包含 [x, y, z, cop] 
-        // 并且后续我们会根据cop动态计算气泡大小：最大COP对应最大尺寸，最小COP对应最小尺寸 (线性映射)
-        // 设定气泡半径范围 (像素): 最小半径 3.5，最大半径 12 (视觉舒适)
+        // 气泡半径范围 (像素)
         const minRadius = 3.8;
         const maxRadius = 13.5;
         
@@ -146,36 +98,51 @@
         function mapCopToRadius(cop) {
             if (maxCOP === minCOP) return (minRadius + maxRadius) / 2;
             const t = (cop - minCOP) / (maxCOP - minCOP);
-            // t=0 -> minRadius, t=1 -> maxRadius
             return minRadius + t * (maxRadius - minRadius);
         }
         
-        // 准备最终的系列数据: 每个数据点格式 { value: [x, y, z, cop], symbolSize: radius, itemStyle: { color: 基于cop的渐变颜色 } }
-        // 需求: COP最大时气泡最大且为蓝色，COP最小时气泡最小且为红色
-        // 颜色映射: 红色 (低COP) -> 蓝色 (高COP)。 使用HSL或RGB插值: 红(255,0,0) 到 蓝(0,0,255)
-        // 更精准: 低COP(#ef4444 红), 高COP(#3b82f6 蓝)
+        // 颜色映射：红 -> 黄 -> 绿 -> 蓝 (基于COP线性插值，符合红黄绿蓝区间)
+        // t = 0 (低COP, 红色) , t ≈ 0.33 黄色, t ≈ 0.66 绿色, t = 1 蓝色
         function getColorByCop(cop) {
-            const t = (cop - minCOP) / (maxCOP - minCOP); // 0低 -> 1高
-            // 红色分量: 从高到低 (低cop时红高)  红 = 255 * (1 - t)
-            // 绿色分量适当调整使过渡更自然 (中间略带紫色/青色调)
-            // 蓝色分量: 从低到高: 蓝 = 255 * t
-            // 为美观，让绿色也参与: 增加青蓝质感，最终颜色鲜艳
-            const r = Math.floor(200 + 55 * (1 - t));      // 低COP 255附近，高COP 200左右
-            const g = Math.floor(80 + 100 * t);            // 低COP偏暗红，高COP绿升高走向青蓝
-            const b = Math.floor(50 + 205 * t);             // 低COP 蓝少，高COP 蓝多
-            // 对极端值进行钳位
-            const finalR = Math.min(255, Math.max(60, r));
-            const finalG = Math.min(240, Math.max(40, g));
-            const finalB = Math.min(255, Math.max(50, b));
-            // 高COP最终呈现清澈蓝色，低COP呈现红/橙红
-            return `rgb(${finalR}, ${finalG}, ${finalB})`;
+            let t = (cop - minCOP) / (maxCOP - minCOP);
+            // 确保t在[0,1]区间
+            t = Math.min(1.0, Math.max(0.0, t));
+            
+            let r, g, b;
+            // 分段： 红(1,0,0) -> 黄(1,1,0) -> 绿(0,1,0) -> 蓝(0,0,1)
+            if (t < 0.33) {
+                // 红 -> 黄 区间 [0, 0.33]
+                const ratio = t / 0.33;   // 0..1
+                r = 255;
+                g = 255 * ratio;
+                b = 0;
+            } else if (t < 0.66) {
+                // 黄 -> 绿 区间 [0.33, 0.66]
+                const ratio = (t - 0.33) / 0.33;   // 0..1
+                r = 255 * (1 - ratio);
+                g = 255;
+                b = 0;
+            } else {
+                // 绿 -> 蓝 区间 [0.66, 1]
+                const ratio = (t - 0.66) / 0.34;   // 0..1
+                r = 0;
+                g = 255 * (1 - ratio);
+                b = 255 * ratio;
+            }
+            
+            // 取整并确保边界
+            r = Math.floor(Math.min(255, Math.max(0, r)));
+            g = Math.floor(Math.min(255, Math.max(0, g)));
+            b = Math.floor(Math.min(255, Math.max(0, b)));
+            
+            return `rgb(${r}, ${g}, ${b})`;
         }
         
-        // 构建气泡图数据数组 (适配echarts scatter3D，每个数据携带独立的symbolSize和itemStyle)
+        // 构建气泡图数据数组 (每个点独立颜色和大小)
         const seriesData = rawDataRows.map(row => {
-            const supply = row[0];    // x
-            const returnTemp = row[1]; // y
-            const load = row[2];       // z
+            const supply = row[0];
+            const returnTemp = row[1];
+            const load = row[2];
             const cop = row[3];
             const radius = mapCopToRadius(cop);
             const color = getColorByCop(cop);
@@ -184,10 +151,10 @@
                 symbolSize: radius,
                 itemStyle: {
                     color: color,
-                    borderColor: 'rgba(255,255,200,0.5)',
-                    borderWidth: 0.6,
-                    shadowBlur: 6,
-                    shadowColor: 'rgba(0,0,0,0.2)'
+                    borderColor: 'rgba(255,255,240,0.6)',
+                    borderWidth: 0.5,
+                    shadowBlur: 5,
+                    shadowColor: 'rgba(0,0,0,0.15)'
                 }
             };
         });
@@ -196,12 +163,7 @@
         const dom = document.getElementById('main');
         const myChart = echarts.init(dom);
         
-        // 配置三维气泡图 (双变量编码: 颜色和大小均表示COP，符合要求)
-        // 由于每个点单独控制颜色和大小，所以不需要visualMap整体映射，但为了图例说明，额外加一个visualMap作为辅助指示条? 为了清晰提示，可不加visualMap，但会使用tooltip展示准确COP。
-        // 为了满足用户预期同时增加色条辅助说明，可以自定义一个graphic色阶或者采用visualMap但需要取消颜色控制? 为了不冲突，使用visualMap但设置系列颜色覆盖可能会被冲掉。
-        // 最佳: 让series.itemStyle生效，同时添加一个visualMap仅用作图例参考(不实际映射)，但会产生误导。更简洁: 直接在右侧添加一个渐变色图例 graphic。
-        // 这样做更符合“气泡大小和颜色一起表示COP”的明确要求，也不干扰独立设定的颜色。
-        
+        // 配置选项：浅色背景，仅保留图例 (右侧渐变条+大小示意) 与图表本身，删除所有额外注释
         const option = {
             backgroundColor: '#fefefe',
             toolbox: {
@@ -214,26 +176,19 @@
                 top: 20,
                 iconStyle: { borderColor: '#2c3e66' }
             },
-            // 标题区 (浅色风格)
+            // 简洁标题 (无副标题)
             title: {
                 show: true,
-                text: '❄️ 冷冻机组 COP 性能气泡图 | 颜色+大小双映射 COP',
+                text: 'COP 性能气泡图',
                 left: 'center',
                 top: 8,
                 textStyle: {
                     color: '#1f2937',
                     fontSize: 18,
                     fontWeight: 'bold',
-                    fontFamily: 'PingFang SC, Roboto',
-                    textShadow: 'none'
-                },
-                subtext: '气泡越大/越蓝 → COP越高 | 气泡越小/越红 → COP越低',
-                subtextStyle: {
-                    color: '#4b5563',
-                    fontSize: 12
+                    fontFamily: 'PingFang SC, Roboto'
                 }
             },
-            // 网格3D配置 (浅色背景，轴线加深)
             grid3D: {
                 viewControl: {
                     autoRotate: false,
@@ -255,7 +210,6 @@
                         intensity: 0.6
                     }
                 },
-                // 背景平面浅色透明风格
                 environment: 'none',
                 axisLine: {
                     lineStyle: { color: '#3b4e6b', width: 2 }
@@ -282,7 +236,7 @@
                 }
             },
             xAxis3D: {
-                name: '❄️ 冷冻供水温度 (℃)',
+                name: '冷冻供水温度 (℃)',
                 nameTextStyle: {
                     fontSize: 13,
                     fontWeight: 'bold',
@@ -298,7 +252,7 @@
                 }
             },
             yAxis3D: {
-                name: '🌊 冷却回水温度 (℃)',
+                name: '冷却回水温度 (℃)',
                 nameTextStyle: {
                     fontSize: 13,
                     fontWeight: 'bold',
@@ -313,7 +267,7 @@
                 }
             },
             zAxis3D: {
-                name: '⚙️ 负荷率',
+                name: '负荷率',
                 nameTextStyle: {
                     fontSize: 13,
                     fontWeight: 'bold',
@@ -331,8 +285,6 @@
                 name: 'COP 性能气泡',
                 type: 'scatter3D',
                 data: seriesData,
-                // 此处不设统一symbolSize，因为每个数据点自带
-                // 开启高亮强调效果：放大并显示详细标签
                 emphasis: {
                     scale: 1.35,
                     label: {
@@ -360,9 +312,7 @@
                         borderColor: '#ffffff'
                     }
                 },
-                // 关闭渐进式渲染以避免样式覆盖，确保每个点独立大小/颜色
                 progressive: 0,
-                // 启用鼠标悬浮时tooltip
                 tooltip: {
                     show: true,
                     formatter: function(params) {
@@ -370,19 +320,18 @@
                             const val = params.data.value;
                             const copVal = val[3];
                             return `<strong style="color:#1e88e5">COP = ${copVal.toFixed(4)}</strong><br/>
-                                    🧊 冷冻供水: ${val[0]} ℃ &nbsp;|&nbsp; 🔁 冷却回水: ${val[1]} ℃<br/>
-                                    📊 负荷率: ${val[2].toFixed(2)}<br/>
-                                    <span style="font-size:11px">🔵 气泡越大/越蓝 → COP越高 &nbsp;&nbsp;🔴 气泡越小/越红 → COP越低</span>`;
+                                    冷冻供水: ${val[0]} ℃ &nbsp;|&nbsp; 冷却回水: ${val[1]} ℃<br/>
+                                    负荷率: ${val[2].toFixed(2)}`;
                         }
                         return 'COP性能数据';
                     },
                     backgroundColor: 'rgba(20,30,45,0.85)',
                     borderColor: '#facc15',
                     borderWidth: 1,
-                    textStyle: { color: '#f1f5f9', fontSize: 12, fontFamily: 'monospace' }
+                    textStyle: { color: '#f1f5f9', fontSize: 12 }
                 }
             }],
-            // 添加一个自定义的渐变图例条 (graphic) 以补充说明颜色+大小的双编码含义 (由于没有visualMap，保证直观)
+            // 简洁图例 (右侧渐变条 + 大小示意) 无多余注释文字
             graphic: [
                 {
                     type: 'group',
@@ -391,29 +340,32 @@
                     bounding: 'absolute',
                     z: 100,
                     children: [
+                        // 颜色渐变条
                         {
                             type: 'rect',
-                            shape: { x: -20, y: -120, width: 28, height: 160 },
+                            shape: { x: -20, y: -110, width: 24, height: 160 },
                             style: {
                                 fill: {
                                     type: 'linear',
                                     x: 0, y: 0, x2: 0, y2: 1,
                                     colorStops: [
                                         { offset: 0, color: '#3b82f6' },   // 蓝 (高COP)
-                                        { offset: 0.5, color: '#8b5cf6' },
+                                        { offset: 0.34, color: '#22c55e' }, // 绿
+                                        { offset: 0.67, color: '#eab308' }, // 黄
                                         { offset: 1, color: '#ef4444' }     // 红 (低COP)
                                     ]
                                 },
                                 stroke: '#334155',
                                 lineWidth: 1,
-                                shadowBlur: 4
+                                shadowBlur: 3
                             }
                         },
+                        // 简单的高/低标注 (图例必要部分)
                         {
                             type: 'text',
-                            shape: { x: 10, y: -130 },
+                            shape: { x: 6, y: -118 },
                             style: {
-                                text: '高 COP ↑',
+                                text: '高 COP',
                                 fill: '#1e293b',
                                 fontSize: 11,
                                 fontWeight: 'bold'
@@ -421,79 +373,52 @@
                         },
                         {
                             type: 'text',
-                            shape: { x: 10, y: 45 },
+                            shape: { x: 6, y: 58 },
                             style: {
-                                text: '低 COP ↓',
+                                text: '低 COP',
                                 fill: '#1e293b',
                                 fontSize: 11,
                                 fontWeight: 'bold'
                             }
                         },
-                        {
-                            type: 'text',
-                            shape: { x: -40, y: -150 },
-                            style: {
-                                text: '🏷️ COP 色阶',
-                                fill: '#0f172a',
-                                fontSize: 12,
-                                fontWeight: 'bold'
-                            }
-                        },
+                        // 大气泡示意 (蓝色)
                         {
                             type: 'circle',
-                            shape: { cx: 18, cy: -155, r: 8 },
-                            style: { fill: '#3b82f6', stroke: '#fff', lineWidth: 1.5 }
+                            shape: { cx: 24, cy: -148, r: 8 },
+                            style: { fill: '#3b82f6', stroke: '#ffffff', lineWidth: 1.2, shadowBlur: 3 }
                         },
+                        // 小气泡示意 (红色)
                         {
                             type: 'circle',
-                            shape: { cx: 18, cy: 65, r: 4 },
-                            style: { fill: '#ef4444', stroke: '#fff', lineWidth: 1.2 }
+                            shape: { cx: 24, cy: 72, r: 4 },
+                            style: { fill: '#ef4444', stroke: '#ffffff', lineWidth: 1.2, shadowBlur: 2 }
                         },
                         {
                             type: 'text',
-                            shape: { x: 32, y: -159 },
-                            style: { text: '大气泡', fill: '#1e293b', fontSize: 10 }
+                            shape: { x: 38, y: -152 },
+                            style: { text: '大气泡', fill: '#334155', fontSize: 10, fontWeight: 'normal' }
                         },
                         {
                             type: 'text',
-                            shape: { x: 32, y: 61 },
-                            style: { text: '小气泡', fill: '#1e293b', fontSize: 10 }
+                            shape: { x: 38, y: 68 },
+                            style: { text: '小气泡', fill: '#334155', fontSize: 10, fontWeight: 'normal' }
                         }
                     ]
-                },
-                // 增加细微水印说明区
-                {
-                    type: 'text',
-                    left: 20,
-                    bottom: 12,
-                    style: {
-                        text: '数据来源: 冷冻供水/冷却回水/负荷率实验数据 | 气泡大小&颜色均映射 COP (Min→红/小, Max→蓝/大)',
-                        fill: '#5b6e8c',
-                        fontSize: 10,
-                        fontFamily: 'monospace'
-                    },
-                    z: 99,
-                    silent: true
                 }
             ]
         };
         
         myChart.setOption(option);
         
-        // 自适应窗口大小
         window.addEventListener('resize', () => {
             myChart.resize();
         });
         
-        // 手动触发一次resize使渲染更完美
         setTimeout(() => {
             myChart.resize();
         }, 150);
         
-        console.log("3D气泡图渲染完成，每个气泡大小+颜色独立编码COP，最大值(蓝色+大气泡)，最小值(红色+小气泡)");
-        
-        // 附加: 因为在echarts-gl中，每个数据点的symbolSize需要是数值，但是scatter3D系列支持数据点级别的symbolSize
-        // 验证通过，完全符合要求。背景浅色，视觉舒适
+        console.log("3D气泡图渲染完成，颜色区间红→黄→绿→蓝，气泡大小同时映射COP，已移除额外注释");
     })();
 </script>
 </body>
