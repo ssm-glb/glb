@@ -3,10 +3,16 @@ name: Copy Release Assets to GitHub Pages
 
 on:
   release:
-    types: [published]  # 每当有新的 Release 发布时触发
+    types: [published]
+  workflow_dispatch:  # 允许手动触发
+    inputs:
+      tag_name:
+        description: 'Release 标签名（例如 v1.2）'
+        required: false
+        type: string
 
 permissions:
-  contents: write       # 授予推送代码到 Pages 分支的权限
+  contents: write
 
 jobs:
   copy-assets:
@@ -16,20 +22,20 @@ jobs:
       - name: Checkout the pages branch
         uses: actions/checkout@v4
         with:
-          ref: 'main'  # 你的 Pages 分支是 main
+          ref: 'main'
 
       - name: Download Release Asset
         uses: robinraju/release-downloader@v1.8
         with:
-          repository: ${{ github.repository }} # 当前仓库
-          tag: ${{ github.event.release.tag_name }} # 当前 Release 的标签名
-          fileName: "rs.glb" # 要下载的文件名
-          out-file-path: "./glb/glb/" # 将文件下载并保存到这个路径下
+          repository: ${{ github.repository }}
+          tag: ${{ github.event.inputs.tag_name || github.event.release.tag_name }}
+          fileName: "*.glb"  # ✅ 下载所有 .glb 文件，不再限制具体文件名
+          out-file-path: "./glb/glb/"
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./       # 将当前目录的所有变更推送回去
-          publish_branch: main  # 推送到 main 分支
-          force_orphan: false   # 保留提交历史
+          publish_dir: ./
+          publish_branch: main
+          force_orphan: false
