@@ -1,0 +1,56 @@
+# .github/workflows/copy-release-to-pages.yml
+name: Copy Release Assets to GitHub Pages
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release 标签名（例如 v1.2）'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  copy-assets:
+    name: Copy Assets to Pages Branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: 'main'
+          fetch-depth: 0  # 获取完整历史，以便保留文件
+
+      - name: Download Release Asset
+        uses: robinraju/release-downloader@v1.8
+        with:
+          repository: ${{ github.repository }}
+          tag: ${{ github.event.inputs.tag_name || github.event.release.tag_name }}
+          fileName: "*.glb"
+          out-file-path: "./glb/"
+
+      - name: Deploy to GitHub Pages (preserve existing files)
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: main
+          folder: ./glb
+          target-folder: glb
+          clean: false                    # ✅ 关键：不删除已有文件
+          clean-exclude: |
+            .github
+            .nojekyll
+            .gitignore
+            LICENSE
+            README.md
+            doc/
+            geojson/
+            gif/
+            mp4/
+            three/
