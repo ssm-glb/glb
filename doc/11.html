@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>节能诊断智能体 — EnerDiag Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  /* ── 浅色主题（对齐 om.html） ── */
+  --bg-body: lab(98.2598% -.636548 -1.7538);
+  --bg-card: lab(100% 0 0);
+  --bg-subtle: lab(96% 0 0);
+  --bg-header: oklab(0.984998 -0.00196332 -0.00457925 / 0.8);
+  --border-color: lab(90.7188% -1.25688 -3.49852);
+  --border-light: lab(93% -0.5 -1%);
+  --text-primary: lab(9.39468% -1.22011 -10.5573);
+  --text-secondary: lab(47.751% -1.45984 -7.25375);
+  --text-tertiary: lab(65% -1 -3%);
+  --text-white: lab(98.84% .0000298023 -.0000119209);
+  --accent: lab(50.3204% -1.34841 -54.246);
+  --accent-light: lab(94.2019% -3.92574 -10.2494);
+  --accent-fg: lab(29.8513% -1.80453 -34.0015);
+  --amber-fg: lab(37.8822% 37.1699% 52.2718);
+  --amber-stroke: lab(72.7183% 31.8672% 97.9407);
+  --amber-bg: lab(97.7008% 1.53735% 5.90649%);
+  --amber-dot: lab(64.272% 57.1788% 90.3583);
+  --green-fg: lab(41.6013% -9.10804% -42.5647%);
+  --green-bg: lab(97.3623% -2.33802% -4.13098%);
+  --green-dot: lab(63.3038% -18.433% -51.0407);
+  --red-fg: lab(43% 45 30);
+  --red-bg: lab(97% 5 4);
+  --red-dot: lab(60% 50 35);
+  --blue-fg: lab(40% -2 -30);
+  --blue-bg: lab(96% -2 -6);
+  --blue-dot: lab(55% -5 -25);
+  --purple-fg: lab(42% 25 -35);
+  --purple-bg: lab(96% 4 -5);
+  --purple-dot: lab(58% 35 -25);
+  --pill-bg: lab(95.3588% -1.25813% -3.49921%);
+  --pill-fg: lab(18.6941% -1.58432% -10.6544%);
+  --radius-sm: 11.2px;
+  --radius-md: 14px;
+  --radius-lg: 19.6px;
+  --radius-xl: 25.2px;
+  --radius-full: 9999px;
+  --shadow-card: rgba(0,0,0,0) 0 0 0 0, rgba(0,0,0,0.1) 0 1px 3px 0, rgba(0,0,0,0.1) 0 1px 2px -1px;
+  --shadow-card-hover: rgba(0,0,0,0) 0 0 0 0, rgba(0,0,0,0.1) 0 4px 6px -1px, rgba(0,0,0,0.1) 0 2px 4px -2px;
+  --sans: 'Inter', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  /* 兼容旧变量名（组件内仍用 teal/amber/red/blue/purple 等） */
+  --bg: var(--bg-body); --bg2: var(--bg-card); --bg3: var(--bg-subtle);
+  --border: var(--border-color); --border2: var(--border-light);
+  --txt: var(--text-primary); --txt2: var(--text-secondary); --txt3: var(--text-tertiary);
+  --teal: #6366f1;        /* 主色用 indigo（与 om 的 accent 一致） */
+  --teal-dim: lab(94% 8 -8);
+  --teal-fg: var(--accent-fg);
+  --amber: #d97706;
+  --amber-dim: var(--amber-bg);
+  --red: #dc2626;
+  --red-dim: var(--red-bg);
+  --blue: #2563eb;
+  --blue-dim: var(--blue-bg);
+  --purple: #8b5cf6;
+  --purple-dim: var(--purple-bg);
+  --r: var(--radius-lg); --r-sm: var(--radius-md);
+  --mono: 'Inter', system-ui, sans-serif; --sans: var(--sans);
+}
+html{font-size:14px}
+body{background:var(--bg-body);color:var(--text-primary);font-family:var(--sans);min-height:100vh;line-height:1.5}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-color);border-radius:2px}
+
+.shell{display:grid;grid-template-columns:228px 1fr;min-height:100vh}
+
+/* sidebar */
+.sidebar{background:var(--bg-card);border-right:0.8px solid var(--border-color);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.logo{padding:18px 18px 14px;border-bottom:0.8px solid var(--border-color)}
+.logo-mark{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.logo-icon{width:32px;height:32px;border-radius:var(--radius-md);background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-icon svg{width:17px;height:17px}
+.logo-name{font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--text-primary)}
+.logo-sub{font-size:10px;color:var(--text-secondary);letter-spacing:.04em}
+.nav{padding:10px 10px;flex:1}
+.nav-sec{font-size:9px;color:var(--text-tertiary);letter-spacing:.12em;text-transform:uppercase;padding:12px 8px 6px;font-weight:600}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-md);cursor:pointer;font-size:13px;color:var(--text-secondary);transition:all .15s;border:none;background:none;width:100%;text-align:left;font-family:var(--sans)}
+.nav-item:hover{background:var(--bg-subtle);color:var(--text-primary)}
+.nav-item.active{background:var(--accent-light);color:var(--accent-fg);font-weight:500}
+.nav-item svg{width:16px;height:16px;flex-shrink:0;opacity:.7}
+.nav-item.active svg{opacity:1}
+.nav-item .tagn{margin-left:auto;font-size:9px;font-weight:600;background:var(--purple-bg);color:var(--purple-fg);padding:2px 7px;border-radius:var(--radius-full);letter-spacing:.04em;border:0.8px solid var(--border-light)}
+.sb-foot{padding:13px 16px;border-top:0.8px solid var(--border-color);font-size:10px;color:var(--text-tertiary);line-height:1.7}
+.sb-foot .v{color:var(--accent-fg);font-weight:500}
+
+/* main */
+.main{overflow-y:auto}
+.topbar{position:sticky;top:0;z-index:10;background:var(--bg-header);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:0.8px solid var(--border-color);padding:14px 26px;display:flex;align-items:center;justify-content:space-between}
+.topbar-title{font-size:15px;font-weight:600;color:var(--text-primary)}
+.topbar-meta{font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:8px}
+.dot{display:inline-block;width:6px;height:6px;background:var(--green-dot);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.content{padding:24px 26px 60px}
+
+.panel{display:none;animation:fade .18s ease}
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+/* cards */
+.card{background:var(--bg-card);border:0.8px solid var(--border-color);border-radius:var(--radius-xl);padding:20px;margin-bottom:16px;box-shadow:var(--shadow-card);position:relative;overflow:hidden}
+.card-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.card-title{font-size:16px;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:8px}
+.card-hint{font-size:11px;color:var(--text-secondary)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+
+/* metric */
+.metric{background:var(--bg-subtle);border:0.8px solid var(--border-color);border-radius:var(--radius-lg);padding:14px 16px}
+.metric-label{font-size:11px;color:var(--text-secondary);letter-spacing:.02em;margin-bottom:6px}
+.metric-value{font-size:27px;font-weight:700;font-family:var(--sans);line-height:1.1;color:var(--text-primary)}
+.metric-value.teal{color:var(--accent)}.metric-value.amber{color:var(--amber-fg)}
+.metric-value.red{color:var(--red-fg)}.metric-value.blue{color:var(--blue-fg)}
+.metric-value.green{color:var(--green-fg)}
+.metric-sub{font-size:11px;color:var(--text-secondary);margin-top:5px}
+
+/* run header */
+.run-bar{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px}
+.run-fld{display:flex;flex-direction:column;gap:5px}
+.run-fld label{font-size:11px;color:var(--text-secondary);font-weight:500}
+select{padding:9px 14px;background:var(--bg-card);border:0.8px solid var(--border-color);border-radius:var(--radius-md);color:var(--text-primary);font-family:var(--sans);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s;min-width:150px}
+select:hover{border-color:var(--border-light)}select:focus{border-color:var(--accent)}
+select option{background:var(--bg-card);color:var(--text-primary)}
+.btn{padding:9px 20px;background:var(--accent);color:var(--text-white);border:none;border-radius:var(--radius-md);font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:8px;transition:opacity .15s}
+.btn:hover{opacity:.9}
+.btn:disabled{opacity:.5;cursor:default}
+.btn svg{width:15px;height:15px}
+
+/* pipeline */
+.pipe{display:flex;gap:6px;flex-wrap:wrap;background:var(--bg-card);border:0.8px solid var(--border-color);border-radius:var(--radius-xl);padding:14px 16px;margin-bottom:16px;box-shadow:var(--shadow-card)}
+.pstep{flex:1;min-width:118px;background:var(--bg-subtle);border:0.8px solid var(--border-color);border-radius:var(--radius-md);padding:9px 11px;position:relative;opacity:.5;transition:all .35s}
+.pstep .pi{font-size:10px;color:var(--text-tertiary);margin-bottom:3px;letter-spacing:.04em;font-weight:500}
+.pstep .pn{font-size:12px;color:var(--text-secondary);font-weight:500}
+.pstep .ps{font-size:10px;margin-top:3px;color:var(--text-tertiary)}
+.pstep.run{opacity:1;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-light)}
+.pstep.run .pn{color:var(--accent-fg)}
+.pstep.done{opacity:1;border-color:var(--border-light)}
+.pstep.done .pn{color:var(--text-primary)}
+.pstep.done .ps{color:var(--green-fg)}
+.pstep .eng{position:absolute;top:8px;right:9px;font-size:9px;font-weight:600;padding:2px 7px;border-radius:var(--radius-full);letter-spacing:.03em}
+.eng-rule{background:var(--purple-bg);color:var(--purple-fg)}
+.eng-data{background:var(--blue-bg);color:var(--blue-fg)}
+.eng-agent{background:var(--accent-light);color:var(--accent-fg)}
+
+/* results reveal */
+.results{display:none}.results.show{display:block;animation:fade .3s ease}
+.placeholder{text-align:center;padding:50px 20px;color:var(--text-tertiary)}
+.placeholder svg{width:40px;height:40px;opacity:.4;margin-bottom:12px}
+.placeholder .pt{font-size:14px;color:var(--text-secondary);margin-bottom:4px;font-weight:500}
+.placeholder .pd{font-size:12px;color:var(--text-tertiary)}
+
+/* energy chain bars */
+.chain-bar{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.chain-bar .cl{min-width:78px;font-size:12px;color:var(--text-secondary)}
+.chain-bar .cbg{flex:1;height:16px;background:var(--pill-bg);border-radius:var(--radius-full);overflow:hidden}
+.chain-bar .cf{height:100%;border-radius:var(--radius-full);background:var(--accent);transition:width .7s cubic-bezier(.4,0,.2,1)}
+.chain-bar .cf.weak{background:var(--amber-dot)}
+.chain-bar .cv{min-width:44px;text-align:right;font-size:12px;color:var(--text-primary);font-weight:500}
+
+/* findings */
+.finding{display:flex;gap:12px;padding:13px 0;border-bottom:0.8px solid var(--border-light)}
+.finding:last-child{border-bottom:none}
+.f-sev{width:4px;border-radius:var(--radius-full);flex-shrink:0}
+.f-sev.red{background:var(--red-dot)}.f-sev.amber{background:var(--amber-dot)}.f-sev.blue{background:var(--blue-dot)}
+.f-body{flex:1}
+.f-top{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.f-title{font-size:14px;font-weight:600;color:var(--text-primary)}
+.f-src{font-size:10px;font-weight:500;padding:2px 8px;border-radius:var(--radius-full);letter-spacing:.02em;background:var(--pill-bg);color:var(--text-secondary);border:0.8px solid var(--border-light)}
+.f-desc{font-size:12px;color:var(--text-secondary);line-height:1.65}
+
+/* rec table */
+.rec-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.rec-tbl th{text-align:left;padding:10px;font-size:11px;letter-spacing:.02em;text-transform:uppercase;color:var(--text-secondary);border-bottom:0.8px solid var(--border-color);font-weight:600}
+.rec-tbl td{padding:12px 10px;border-bottom:0.8px solid var(--border-light);color:var(--text-secondary);vertical-align:top;line-height:1.6}
+.rec-tbl tr:hover td{background:var(--bg-body)}
+.rec-tbl .rn{color:var(--accent-fg);font-size:12px;font-weight:600}
+.rec-tbl .gain{color:var(--green-fg);font-size:12px;white-space:nowrap;font-weight:500}
+
+/* reasoning chain (signature) */
+.reason-wrap{display:flex;flex-direction:column;gap:18px}
+.reason{background:var(--bg-subtle);border:0.8px solid var(--border-color);border-radius:var(--radius-lg);padding:16px 18px}
+.reason-hd{display:flex;align-items:center;gap:9px;margin-bottom:14px}
+.reason-hd .rt{font-size:14px;font-weight:600;color:var(--text-primary)}
+.reason-hd .rtag{font-size:10px;font-weight:600;padding:3px 9px;border-radius:var(--radius-full);letter-spacing:.02em}
+.chain{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}
+.cnode{background:var(--bg-card);border:0.8px solid var(--border-light);border-radius:var(--radius-md);padding:9px 13px;min-width:130px;max-width:185px;display:flex;flex-direction:column;justify-content:center}
+.cnode .cn-l{font-size:9px;color:var(--text-tertiary);letter-spacing:.04em;margin-bottom:3px;text-transform:uppercase;font-weight:600}
+.cnode .cn-t{font-size:12px;color:var(--text-primary);line-height:1.4}
+.cnode.root{border-color:var(--red-dot);background:var(--red-bg)}
+.cnode.root .cn-t{color:var(--red-fg);font-weight:600}
+.cnode.fix{border-color:var(--green-dot);background:var(--green-bg)}
+.cnode.fix .cn-t{color:var(--green-fg);font-weight:600}
+.carrow{display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);padding:0 4px;flex-shrink:0}
+.carrow svg{width:18px;height:18px}
+
+/* tree (expert rules) */
+.tree-grp{margin-bottom:14px}
+.tree-cat{display:flex;align-items:center;gap:9px;padding:10px 14px;background:var(--bg-subtle);border:0.8px solid var(--border-color);border-radius:var(--radius-md);margin-bottom:8px}
+.tree-cat .tc-n{font-size:13px;font-weight:600;color:var(--text-primary)}
+.tree-cat .tc-c{margin-left:auto;font-size:11px;color:var(--text-secondary)}
+.tree-leaves{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;padding-left:14px}
+.leaf{display:flex;align-items:center;gap:9px;padding:10px 12px;background:var(--bg-card);border:0.8px solid var(--border-color);border-radius:var(--radius-md);font-size:12px}
+.leaf .ld{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.leaf .ld.ok{background:var(--green-dot)}.leaf .ld.warn{background:var(--amber-dot)}.leaf .ld.err{background:var(--red-dot)}
+.leaf .ln{color:var(--text-secondary);flex:1}
+.leaf .lst{font-size:10px;letter-spacing:.02em;font-weight:600}
+.leaf .lst.ok{color:var(--green-fg)}.leaf .lst.warn{color:var(--amber-fg)}.leaf .lst.err{color:var(--red-fg)}
+
+/* form group */
+.fg{margin-bottom:14px}
+.fg-lbl{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.fg-lbl span{font-size:12px;color:var(--text-secondary)}
+.fg-lbl .val{font-size:12px;color:var(--accent-fg);font-weight:600}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;background:var(--pill-bg);border-radius:var(--radius-full);outline:none;border:0.8px solid var(--border-light)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:var(--accent);border-radius:50%;cursor:pointer;border:2px solid var(--bg-card);box-shadow:var(--shadow-card)}
+
+.badge{display:inline-flex;align-items:center;font-size:10px;letter-spacing:.02em;padding:3px 9px;border-radius:var(--radius-full);font-weight:600}
+.b-teal{background:var(--accent-light);color:var(--accent-fg)}.b-amber{background:var(--amber-bg);color:var(--amber-fg)}
+.b-red{background:var(--red-bg);color:var(--red-fg)}.b-blue{background:var(--blue-bg);color:var(--blue-fg)}
+.b-green{background:var(--green-bg);color:var(--green-fg)}
+.b-gray{background:var(--pill-bg);color:var(--text-secondary);border:0.8px solid var(--border-light)}
+
+.hero{text-align:center;padding:16px 0}
+.hero .big{font-size:54px;font-weight:700;font-family:var(--sans);line-height:1;color:var(--text-primary)}
+.hero .big.teal{color:var(--accent)}.hero .big.amber{color:var(--amber-fg)}.hero .big.red{color:var(--red-fg)}
+.hero .lbl{font-size:11px;color:var(--text-secondary);letter-spacing:.04em;margin-top:6px}
+
+.sh{font-size:12px;color:var(--text-secondary);letter-spacing:.02em;margin-bottom:12px;padding-bottom:8px;border-bottom:0.8px solid var(--border-light);font-weight:600}
+.note{font-size:12px;color:var(--text-secondary);line-height:1.7}
+
+/* chat */
+.chat-hist{display:flex;flex-direction:column;gap:14px;max-height:420px;overflow-y:auto;padding:4px 2px 12px}
+.cmsg{display:flex;flex-direction:column;gap:4px}
+.crole{font-size:10px;color:var(--text-tertiary);letter-spacing:.04em;font-weight:600}
+.cbub{padding:11px 14px;border-radius:var(--radius-lg);font-size:13px;line-height:1.7;max-width:84%}
+.cbub.ai{background:var(--bg-subtle);border:0.8px solid var(--border-color);color:var(--text-primary)}
+.cbub.me{background:var(--accent-light);border:0.8px solid var(--accent);color:var(--text-primary);align-self:flex-end}
+.cin-row{display:flex;gap:8px;margin-top:8px}
+.cin{flex:1;padding:10px 14px;background:var(--bg-body);border:0.8px solid var(--border-color);border-radius:var(--radius-md);color:var(--text-primary);font-family:var(--sans);font-size:13px;outline:none}
+.cin:focus{border-color:var(--accent)}
+.csend{padding:10px 18px;background:var(--accent);color:var(--text-white);border:none;border-radius:var(--radius-md);font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans)}
+.csend:hover{opacity:.9}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.chip{font-size:12px;padding:5px 12px;background:var(--bg-card);border:0.8px solid var(--border-color);border-radius:var(--radius-full);color:var(--text-secondary);cursor:pointer;transition:all .15s;font-family:var(--sans)}
+.chip:hover{border-color:var(--accent);color:var(--accent-fg);background:var(--accent-light)}
+
+@media(max-width:920px){
+  .shell{grid-template-columns:1fr}.sidebar{display:none}
+  .grid2,.grid3,.grid4{grid-template-columns:1fr}
+  .chain{flex-direction:column}.carrow{transform:rotate(90deg);padding:4px 0}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">
+        <div class="logo-icon">
+          <svg viewBox="0 0 18 18" fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 14 L6.5 7 L10 10 L16 3"/><circle cx="16" cy="3" r="1.6" fill="#ffffff" stroke="none"/>
+          </svg>
+        </div>
+        <span class="logo-name">EnerDiag</span>
+      </div>
+      <div class="logo-sub">节能诊断智能体</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-sec">诊断中心</div>
+      <button class="nav-item active" onclick="go('home',this)">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 6 L8 1.5 L14 6 V14 H2 Z"/><path d="M6 14V9h4v5"/></svg>
+        智能诊断台<span class="tagn">AGENT</span>
+      </button>
+      <div class="nav-sec">诊断引擎</div>
+      <button class="nav-item" onclick="go('rule',this)">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 2v3M8 5L4 8M8 5l4 3"/><circle cx="8" cy="2" r="1.3"/><circle cx="4" cy="9" r="1.3"/><circle cx="12" cy="9" r="1.3"/></svg>
+        专家规则诊断
+      </button>
+      <button class="nav-item" onclick="go('chiller',this)">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M5 10l2-3 2 2 2-4"/></svg>
+        主机能效对标
+      </button>
+      <button class="nav-item" onclick="go('energy',this)">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 13V7l3-2 3 3 5-5"/><path d="M2 13h12"/></svg>
+        能耗对标
+      </button>
+      <div class="nav-sec">智能体</div>
+      <button class="nav-item" onclick="go('chat',this)">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 4a1.5 1.5 0 011.5-1.5h9A1.5 1.5 0 0114 4v6a1.5 1.5 0 01-1.5 1.5H6l-3 2.5V11.5H3.5A1.5 1.5 0 012 10Z"/></svg>
+        诊断助手
+      </button>
+    </nav>
+    <div class="sb-foot">
+      <div>EnergyPlus EIR · AHRI 550/590</div>
+      <div>GB 19577 · GB/T 51161</div>
+      <div style="margin-top:5px" class="v">v1.0 · 双引擎编排</div>
+    </div>
+  </aside>
+
+  <!-- main -->
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title" id="tb-title">智能诊断台</span>
+      <span class="topbar-meta"><span class="dot"></span><span id="tb-meta">冷站系统 · 2026-06-13 · 双引擎在线</span></span>
+    </div>
+    <div class="content">
+
+      <!-- ════ HOME: AGENT DASHBOARD ════ -->
+      <div class="panel active" id="p-home">
+        <div class="run-bar">
+          <div class="run-fld">
+            <label>诊断对象</label>
+            <select id="h-station" onchange="resetRun()">
+              <option value="main">冷站系统</option>
+              <option value="or">手术室冷站</option>
+            </select>
+          </div>
+          <div class="run-fld">
+            <label>诊断日期</label>
+            <select id="h-date" onchange="resetRun()">
+              <option>2026-06-13</option><option>2026-06-12</option><option>2026-06-11</option>
+            </select>
+          </div>
+          <button class="btn" id="h-run" onclick="runAgent()">
+            <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 3l8 4.5L4 12Z"/></svg>
+            运行智能诊断
+          </button>
+        </div>
+
+        <!-- KPI -->
+        <div class="grid4" style="margin-bottom:16px">
+          <div class="metric"><div class="metric-label">系统能效 COP</div><div class="metric-value teal" id="k-sys">5.7</div><div class="metric-sub">最高 6.5 · 正常区间</div></div>
+          <div class="metric"><div class="metric-label">主机能效 COP</div><div class="metric-value" id="k-chiller">6.7</div><div class="metric-sub" id="k-chiller-sub">待工况对标</div></div>
+          <div class="metric"><div class="metric-label">当日用能</div><div class="metric-value" style="font-size:22px" id="k-energy">11292.2</div><div class="metric-sub">kWh</div></div>
+          <div class="metric"><div class="metric-label">基线偏差</div><div class="metric-value red" style="font-size:22px" id="k-gap">+10812</div><div class="metric-sub">kWh · 实测 vs 预测</div></div>
+        </div>
+
+        <!-- pipeline -->
+        <div class="pipe" id="pipe"></div>
+
+        <!-- placeholder before run -->
+        <div class="card" id="pre-run">
+          <div class="placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="11" cy="11" r="7"/><path d="M16 16l5 5"/></svg>
+            <div class="pt">诊断结论与建议待生成</div>
+            <div class="pd">点击「运行智能诊断」,智能体将依次调用专家规则与数据驱动引擎,完成根因推理并生成结论</div>
+          </div>
+        </div>
+
+        <!-- results -->
+        <div class="results" id="results">
+          <div class="grid2" style="align-items:start">
+            <div class="card">
+              <div class="card-hd"><span class="card-title">系统能效链分解</span><span class="card-hint">主机 → 输配 → 系统</span></div>
+              <div id="chain-bars"></div>
+              <div class="note" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)" id="chain-note"></div>
+            </div>
+            <div class="card">
+              <div class="card-hd"><span class="card-title">诊断结论 · 主要问题</span><span class="card-hint" id="find-count"></span></div>
+              <div id="findings"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-hd"><span class="card-title">根因推理链</span><span class="card-hint">多引擎结果编排 · 智能体推理</span></div>
+            <div class="reason-wrap" id="reasons"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-hd"><span class="card-title">节能建议</span><span class="card-hint">按优先级排序 · 含预期收益</span></div>
+            <table class="rec-tbl">
+              <thead><tr><th style="width:34px">#</th><th>建议措施</th><th style="width:120px">关联问题</th><th style="width:160px">预期收益</th></tr></thead>
+              <tbody id="recs"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ EXPERT RULES ════ -->
+      <div class="panel" id="p-rule">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">专家规则诊断框架</span><span class="card-hint">制冷站 · 规则评估结果</span></div>
+          <div class="note" style="margin-bottom:16px">规则引擎对冷站各维度进行逐条评估。<span style="color:var(--green-fg)">●正常</span> / <span style="color:var(--amber-fg)">●关注</span> / <span style="color:var(--red-fg)">●异常</span>。命中告警的规则将上送智能体编排层参与根因推理。</div>
+          <div id="rule-tree"></div>
+        </div>
+      </div>
+
+      <!-- ════ CHILLER BENCHMARK ════ -->
+      <div class="panel" id="p-chiller">
+        <div class="grid2" style="align-items:start">
+          <div>
+            <div class="card">
+              <div class="card-hd"><span class="card-title">机型选择</span><span class="card-hint">EnergyPlus EIR 模型</span></div>
+              <select id="ch-sel" onchange="chillerUpdate()" style="width:100%"></select>
+              <div id="ch-tags" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:11px"></div>
+            </div>
+            <div class="card">
+              <div class="card-hd"><span class="card-title">实测运行工况</span></div>
+              <div class="fg"><div class="fg-lbl"><span>实测 COP</span><span class="val" id="chv-cop">6.70</span></div><input type="range" min="40" max="100" value="67" id="ch-cop" oninput="chillerUpdate()"></div>
+              <div class="fg"><div class="fg-lbl"><span>负荷率 PLR</span><span class="val" id="chv-plr">65%</span></div><input type="range" min="20" max="100" value="65" id="ch-plr" oninput="chillerUpdate()"></div>
+              <div class="fg"><div class="fg-lbl"><span>冷冻水出水 Tchws</span><span class="val" id="chv-tchws">7.0 °C</span></div><input type="range" min="50" max="100" value="70" id="ch-tchws" oninput="chillerUpdate()"></div>
+              <div class="fg"><div class="fg-lbl"><span>冷凝器进水 Tcws</span><span class="val" id="chv-tcws">33.5 °C</span></div><input type="range" min="180" max="380" value="335" id="ch-tcws" oninput="chillerUpdate()"></div>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <div class="card-hd"><span class="card-title">工况修正对标</span><span class="card-hint" id="ch-grade-hint">GB 19577 能效等级</span></div>
+              <div class="hero"><div class="big" id="ch-gap">—</div><div class="lbl">实测 vs 工况预期 COP 偏差</div></div>
+              <div class="grid3">
+                <div class="metric"><div class="metric-label">工况预期 COP</div><div class="metric-value green" style="font-size:20px" id="ch-exp">—</div><div class="metric-sub">EIR 修正后</div></div>
+                <div class="metric"><div class="metric-label">IPLV</div><div class="metric-value" style="font-size:20px" id="ch-iplv">—</div><div class="metric-sub">部分负荷综合</div></div>
+                <div class="metric"><div class="metric-label">能效等级</div><div class="metric-value" style="font-size:14px;margin-top:5px" id="ch-grade">—</div><div class="metric-sub">国标基准</div></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="sh">PLR → COP 响应（当前温度条件）</div>
+              <div id="ch-bars"></div>
+            </div>
+            <div class="card">
+              <div class="sh">对标判读</div>
+              <div id="ch-verdict"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ ENERGY BENCHMARK ════ -->
+      <div class="panel" id="p-energy">
+        <div class="run-bar">
+          <div class="run-fld"><label>区域</label>
+            <select id="e-region" onchange="energyUpdate()">
+              <option value="sz">深圳市</option><option value="gz">广州市</option><option value="nj">南京市</option><option value="qd">青岛市</option>
+            </select></div>
+          <div class="run-fld"><label>建筑子类</label>
+            <select id="e-sub" onchange="energyUpdate()"></select></div>
+          <div class="run-fld"><label>对标周期</label>
+            <select id="e-pd" onchange="energyUpdate()"><option value="year">年能耗对标</option><option value="month">月能耗对标</option></select></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><span class="card-title">实测单位面积能耗</span><span class="card-hint" id="e-std-tag">—</span></div>
+          <div class="fg"><div class="fg-lbl"><span>实测值 (kWh/m²)</span><span class="val" id="ev-actual">158</span></div><input type="range" id="e-actual" min="40" max="320" value="158" oninput="energyUpdate()"></div>
+          <div class="grid3" id="e-metrics" style="margin-top:12px"></div>
+        </div>
+        <div class="grid2" style="align-items:start">
+          <div class="card"><div class="sh">能效分级对标</div><div style="height:200px"><canvas id="e-chart"></canvas></div></div>
+          <div class="card"><div class="sh">对标判读</div><div id="e-verdict"></div></div>
+        </div>
+      </div>
+
+      <!-- ════ CHAT ════ -->
+      <div class="panel" id="p-chat">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">诊断助手</span><span class="card-hint">基于本次诊断结果作答</span></div>
+          <div class="chat-hist" id="chat-hist">
+            <div class="cmsg"><div class="crole">智能体</div><div class="cbub ai">您好,我是节能诊断智能体助手。本次对「冷站系统 / 2026-06-13」的诊断已识别出冷却塔散热不足与基线偏差两条主线问题。可以问我:为什么主机能效偏低?各条建议预计能省多少?或某条规则为什么告警?</div></div>
+          </div>
+          <div class="cin-row">
+            <input class="cin" id="chat-in" type="text" placeholder="例如:为什么冷却塔能效低会拉低主机 COP?" onkeydown="if(event.key==='Enter')chatSend()">
+            <button class="csend" onclick="chatSend()">发送 ↗</button>
+          </div>
+          <div class="chips">
+            <button class="chip" onclick="qChat('为什么主机能效偏低？')">主机能效成因</button>
+            <button class="chip" onclick="qChat('基线偏差+10812kWh说明什么？')">基线偏差解读</button>
+            <button class="chip" onclick="qChat('提升冷却塔能效预计能省多少？')">建议收益测算</button>
+            <button class="chip" onclick="qChat('专家规则和数据驱动引擎分别发现了什么？')">双引擎分工</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════ Chiller DB (EnergyPlus EIR) ═══════════ */
+const DB = {
+  "本站_主机A_离心VSD": {brand:"本站", model:"主机A 离心VSD", cap_kW:1230, cap_RT:350, ref_COP:7.40, grade_ref:7.40,
+    CAPFT:[0.906115,0.0292277,-0.0003647,-0.0129115,-0.0000463,0.0002326], EIRFT:[0.3617105,-0.0229833,0.0009808,0.01315,0.00035,-0.0007], EIRFPLR:[0.0369792,0.3741058,0.587931], compressor:"离心机", unloading:"VSD", refrigerant:"R134a"},
+  "开利_19XR_255RT_VSD": {brand:"开利", model:"19XR 255RT", cap_kW:897, cap_RT:255, ref_COP:7.23, grade_ref:7.23,
+    CAPFT:[0.906115,0.0292277,-0.0003647,-0.0129115,-0.0000463,0.0002326], EIRFT:[0.3617105,-0.0229833,0.0009808,0.01315,0.00035,-0.0007], EIRFPLR:[0.0369792,0.3741058,0.587931], compressor:"离心机", unloading:"VSD", refrigerant:"R134a"},
+  "约克_YT_310RT_VSD": {brand:"约克", model:"YT 310RT", cap_kW:1090, cap_RT:310, ref_COP:7.57, grade_ref:7.57,
+    CAPFT:[0.906115,0.0292277,-0.0003647,-0.0129115,-0.0000463,0.0002326], EIRFT:[0.3617105,-0.0229833,0.0009808,0.01315,0.00035,-0.0007], EIRFPLR:[0.0369792,0.3741058,0.587931], compressor:"离心机", unloading:"VSD", refrigerant:"R134a"},
+  "特灵_CVHF_730RT_磁悬浮": {brand:"特灵", model:"CVHF 730RT", cap_kW:2567, cap_RT:730, ref_COP:11.77, grade_ref:11.77,
+    CAPFT:[0.906115,0.0292277,-0.0003647,-0.0129115,-0.0000463,0.0002326], EIRFT:[0.3617105,-0.0229833,0.0009808,0.01315,0.00035,-0.0007], EIRFPLR:[0.0369792,0.3741058,0.587931], compressor:"磁悬浮", unloading:"VSD", refrigerant:"R134a"},
+};
+/* 工况修正模型: COP = COP额定 × 部分负荷因子 × 温度修正因子 (rated 点归一为 1) */
+const RATED={Tlcw:6.67,Tecw:29.44};
+const PLF_PTS=[[0.2,0.86],[0.3,0.99],[0.4,1.07],[0.5,1.12],[0.6,1.11],[0.7,1.08],[0.8,1.05],[0.9,1.02],[1.0,1.00]];
+function interp(pts,x){
+  if(x<=pts[0][0])return pts[0][1]; if(x>=pts[pts.length-1][0])return pts[pts.length-1][1];
+  for(let i=0;i<pts.length-1;i++){const[a,va]=pts[i],[b,vb]=pts[i+1];if(x>=a&&x<=b)return va+(vb-va)*(x-a)/(b-a);} return 1;
+}
+function tempFactor(Tchws,Tcws){ return (1+0.025*(RATED.Tecw-Tcws))*(1+0.015*(Tchws-RATED.Tlcw)); }
+function calcCOP(d,PLR,Tchws,Tcws){
+  const P=Math.max(0.1,Math.min(PLR,1.0));
+  return {COP:d.ref_COP*interp(PLF_PTS,P)*tempFactor(Tchws,Tcws)};
+}
+function calcIPLV(d){
+  const pts=[[1.0,29.44,0.01],[0.75,23.89,0.42],[0.5,18.33,0.45],[0.25,12.78,0.12]];
+  let iplv=0,cops=[];
+  for(const[plr,T,w]of pts){const c=calcCOP(d,plr,RATED.Tlcw,T).COP;cops.push({plr,cop:c,w});iplv+=w*c;}
+  return {iplv:+iplv.toFixed(2),cops};
+}
+function chillerDiag(){
+  const d=DB["本站_主机A_离心VSD"], meas=6.7;
+  const expCur=calcCOP(d,0.65,7,33.5).COP, expImp=calcCOP(d,0.65,7,30).COP;
+  return {meas,expCur,expImp,gapPct:(meas-expCur)/expCur*100};
+}
+function iplvGrade(v){
+  if(v>=9)return{l:'一级 卓越',c:'green'}; if(v>=7.5)return{l:'二级 优秀',c:'green'};
+  if(v>=6)return{l:'三级 良好',c:'blue'}; if(v>=5)return{l:'四级 合格',c:'amber'};
+  return {l:'五级 待提升',c:'red'};
+}
+
+/* ═══════════ Energy benchmark data (GB/T 51161 类) ═══════════ */
+const STD={
+  sz:{name:'深圳市',tag:'SJG 34-2025 · 夏热冬暖',
+    hospital:[{n:'一级医院',c:105,g:80},{n:'二级医院',c:140,g:110},{n:'三级医院',c:155,g:130}]},
+  gz:{name:'广州市',tag:'DBJ 15-129 · 夏热冬暖',
+    hospital:[{n:'一级医院',c:108,g:82},{n:'二级医院',c:143,g:112},{n:'三级医院',c:158,g:132}]},
+  nj:{name:'南京市',tag:'DGJ32 · 夏热冬冷',
+    hospital:[{n:'一级医院',c:95,g:72},{n:'二级医院',c:128,g:100},{n:'三级医院',c:145,g:118}]},
+  qd:{name:'青岛市',tag:'DB37 · 寒冷地区',
+    hospital:[{n:'一级医院',c:88,g:66},{n:'二级医院',c:118,g:92},{n:'三级医院',c:135,g:108}]},
+};
+
+/* ═══════════ Diagnosis findings & reasoning (agent output) ═══════════ */
+const DIAG = {
+  chain:[
+    {l:'主机',v:6.7,max:8,weak:false,unit:''},
+    {l:'冷冻泵',v:268.9,max:300,weak:false,unit:''},
+    {l:'冷却泵',v:156.2,max:300,weak:false,unit:''},
+    {l:'冷却塔',v:77.7,max:300,weak:true,unit:''},
+  ],
+  chainNote:'输配各环节中冷却塔输配能效 77.7 明显低于其余环节,是系统能效(5.7)未能贴近主机能效(6.7)的主因。冷却塔散热不足会推高冷却水温,反向抑制主机 COP,形成耦合。',
+  findings:[
+    {sev:'red',title:'当日用能严重偏离预测基线',src:'数据驱动·异常检测+数据校核',
+     desc:'实测 11292.2 kWh,较预测基线高 10812 kWh(实测约为预测的 23 倍)。偏离度远超正常波动区间——这种量级更可能源于电表计量回路异常或基线模型欠训练,而非真实负荷激增,需优先校核。'},
+    {sev:'amber',title:'冷却塔输配能效偏低',src:'专家规则·水力平衡 + 能效链分解',
+     desc:'冷却塔输配能效 77.7,显著低于冷冻泵(268.9)、冷却泵(156.2)。规则引擎在「冷却水侧不平衡」与「冷却塔出水温度」维度命中告警,指向散热能力不足。'},
+    {sev:'amber',title:'主机能效低于工况预期',src:'数据驱动·主机能效对标',
+     desc:'实测主机 COP 6.70,经工况修正后该工况预期约 {EXP}(偏差 {GAP})。当前冷凝器进水偏高(Tcws 33.5°C)是主因——若冷却水温降至 30°C,工况预期 COP 升至 {IMP},说明缺口主要由冷却侧驱动,而非主机本体衰减(冷凝器结垢/冷媒不足)。'},
+    {sev:'blue',title:'系统能效处正常区间但有提升空间',src:'数据驱动·能效链分解',
+     desc:'系统 COP 5.7(最高 6.5),处于正常水平。主机至系统的输配损失集中在冷却塔环节,优先改善冷却塔可同时提升主机与系统能效。'},
+  ],
+  reasons:[
+    {tag:'主链',tagc:'b-amber',title:'冷却塔散热不足 → 主机能效受抑 → 系统能效被拉低',
+     nodes:[
+      {l:'规则+数据',t:'冷却塔输配能效 77.7 偏低',cls:''},
+      {l:'物理耦合',t:'冷却水进水温度升高',cls:''},
+      {l:'主机对标',t:'主机 COP 6.70 vs 工况预期 {EXP}',cls:''},
+      {l:'能效链',t:'系统能效被拉低至 5.7',cls:''},
+      {l:'根因',t:'冷却塔散热能力不足',cls:'root'},
+      {l:'建议',t:'提升风机转速 / 清洗填料 / 冷却水温联动',cls:'fix'},
+    ]},
+    {tag:'异常链',tagc:'b-red',title:'用能偏差异常 → 基线/计量存疑',
+     nodes:[
+      {l:'异常检测',t:'日用能 +10812 kWh,偏离度极高',cls:''},
+      {l:'数据校核',t:'基线预测值疑似失真',cls:''},
+      {l:'根因',t:'电表计量异常或基线模型欠训练',cls:'root'},
+      {l:'建议',t:'校核计量回路 + 重训练能耗基线',cls:'fix'},
+    ]},
+  ],
+  recs:[
+    {t:'校核冷站电表计量回路,并用近 30 天数据重训练能耗基线模型',rel:'用能偏差',gain:'恢复预测可信度'},
+    {t:'提升冷却塔风机转速,清洗填料与布水系统,建立冷却水温—室外湿球联动控制',rel:'冷却塔能效',gain:'冷却水进水温 ↓1~2 °C'},
+    {t:'冷却水温下降后复核主机 COP,验证能效回升',rel:'主机能效',gain:'主机 COP +0.5~0.7'},
+    {t:'优化冷水机组台数控制,减少低负荷率(PLR<35%)运行时段',rel:'负荷利用',gain:'部分负荷综合能效 +3~5%'},
+  ],
+};
+
+/* expert rule tree */
+const RULES=[
+  {cat:'能源的经济性',leaves:[{n:'单位制冷量的运行成本',s:'ok'},{n:'单位制热量的运行成本',s:'ok'},{n:'单位面积建筑能耗',s:'warn'}]},
+  {cat:'设备选型',leaves:[{n:'制冷站设备选型合理性',s:'ok'}]},
+  {cat:'负荷综合利用',leaves:[{n:'冷热负荷的运行时长分布',s:'warn'},{n:'冷热负荷的运行负荷分布',s:'ok'}]},
+  {cat:'水力平衡',leaves:[{n:'冷冻水侧不平衡',s:'ok'},{n:'冷却水侧不平衡',s:'warn'},{n:'风侧不平衡',s:'ok'}]},
+  {cat:'数据校核',leaves:[{n:'室外温湿度传感器',s:'ok'},{n:'冷冻水供水温度传感器',s:'ok'},{n:'冷冻水回水温度传感器',s:'ok'},{n:'冷冻水压差传感器',s:'ok'},{n:'冷却塔出水温度传感器',s:'warn'},{n:'电能计量回路',s:'err'}]},
+];
+
+/* ═══════════ Agent run animation ═══════════ */
+const PIPE=[
+  {i:'01',n:'数据接入校核',eng:'data',s:'计量异常'},
+  {i:'02',n:'专家规则诊断',eng:'rule',s:'3 告警'},
+  {i:'03',n:'基线预测',eng:'data',s:'偏差超限'},
+  {i:'04',n:'异常检测',eng:'data',s:'高偏离'},
+  {i:'05',n:'能耗对标',eng:'data',s:'已评级'},
+  {i:'06',n:'主机能效对标',eng:'data',s:'-9.5%'},
+  {i:'07',n:'根因推理',eng:'agent',s:'2 根因'},
+  {i:'08',n:'生成结论',eng:'agent',s:'就绪'},
+];
+function renderPipe(){
+  document.getElementById('pipe').innerHTML=PIPE.map((p,i)=>`
+    <div class="pstep" id="ps-${i}">
+      <span class="eng eng-${p.eng}">${p.eng==='rule'?'规则':p.eng==='data'?'数据':'编排'}</span>
+      <div class="pi">${p.i}</div><div class="pn">${p.n}</div><div class="ps">—</div>
+    </div>`).join('');
+}
+let running=false;
+function resetRun(){
+  running=false;
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('pre-run').style.display='block';
+  document.querySelectorAll('.pstep').forEach(s=>{s.className='pstep';s.querySelector('.ps').textContent='—';});
+  const st=document.getElementById('h-station').value;
+  document.getElementById('tb-meta').textContent=`${st==='or'?'手术室冷站':'冷站系统'} · ${document.getElementById('h-date').value} · 双引擎在线`;
+}
+function runAgent(){
+  if(running)return; running=true;
+  document.getElementById('h-run').disabled=true;
+  document.getElementById('pre-run').style.display='none';
+  document.querySelectorAll('.pstep').forEach(s=>{s.className='pstep';s.querySelector('.ps').textContent='—';});
+  let i=0;
+  function step(){
+    if(i>0){const prev=document.getElementById('ps-'+(i-1));prev.className='pstep done';prev.querySelector('.ps').textContent=PIPE[i-1].s;}
+    if(i<PIPE.length){const cur=document.getElementById('ps-'+i);cur.className='pstep run';cur.querySelector('.ps').textContent='运行中…';i++;setTimeout(step,360);}
+    else{revealResults();document.getElementById('h-run').disabled=false;running=false;}
+  }
+  step();
+}
+function revealResults(){
+  const cd=chillerDiag();
+  const tok=s=>s.replace(/{EXP}/g,cd.expCur.toFixed(2)).replace(/{IMP}/g,cd.expImp.toFixed(2))
+    .replace(/{GAP}/g,(cd.gapPct>=0?'+':'')+cd.gapPct.toFixed(1)+'%');
+  // chain bars
+  document.getElementById('chain-bars').innerHTML=DIAG.chain.map(c=>`
+    <div class="chain-bar"><span class="cl">${c.l}</span>
+      <div class="cbg"><div class="cf ${c.weak?'weak':''}" style="width:0%" data-w="${(c.v/c.max*100).toFixed(0)}"></div></div>
+      <span class="cv" style="${c.weak?'color:var(--amber-fg);font-weight:600':''}">${c.v}</span></div>`).join('');
+  setTimeout(()=>document.querySelectorAll('#chain-bars .cf').forEach(f=>f.style.width=f.dataset.w+'%'),60);
+  document.getElementById('chain-note').textContent=DIAG.chainNote;
+  // findings
+  document.getElementById('find-count').textContent=`${DIAG.findings.length} 项`;
+  document.getElementById('findings').innerHTML=DIAG.findings.map(f=>`
+    <div class="finding"><div class="f-sev ${f.sev}"></div><div class="f-body">
+      <div class="f-top"><span class="f-title">${f.title}</span></div>
+      <div style="margin-bottom:5px"><span class="f-src">${f.src}</span></div>
+      <div class="f-desc">${tok(f.desc)}</div></div></div>`).join('');
+  // reasoning
+  const arrow=`<div class="carrow"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9h11M10 5l4 4-4 4"/></svg></div>`;
+  document.getElementById('reasons').innerHTML=DIAG.reasons.map(r=>`
+    <div class="reason">
+      <div class="reason-hd"><span class="rtag ${r.tagc}">${r.tag}</span><span class="rt">${r.title}</span></div>
+      <div class="chain">${r.nodes.map((n,idx)=>`
+        <div class="cnode ${n.cls}"><div class="cn-l">${n.l}</div><div class="cn-t">${tok(n.t)}</div></div>
+        ${idx<r.nodes.length-1?arrow:''}`).join('')}</div>
+    </div>`).join('');
+  // recs
+  document.getElementById('recs').innerHTML=DIAG.recs.map((r,i)=>`
+    <tr><td class="rn">${i+1}</td><td style="color:var(--txt)">${r.t}</td>
+    <td><span class="badge b-gray">${r.rel}</span></td><td class="gain">${r.gain}</td></tr>`).join('');
+  document.getElementById('results').classList.add('show');
+}
+
+/* ═══════════ Expert rule panel ═══════════ */
+function renderRuleTree(){
+  const sl={ok:'正常',warn:'关注',err:'异常'};
+  document.getElementById('rule-tree').innerHTML=RULES.map(g=>{
+    const warns=g.leaves.filter(l=>l.s!=='ok').length;
+    return `<div class="tree-grp">
+      <div class="tree-cat"><span class="ld ${warns?(g.leaves.some(l=>l.s==='err')?'err':'warn'):'ok'}" style="width:8px;height:8px;border-radius:50%;display:inline-block;background:${warns?(g.leaves.some(l=>l.s==='err')?'var(--red-dot)':'var(--amber-dot)'):'var(--green-dot)'}"></span>
+        <span class="tc-n">${g.cat}</span><span class="tc-c">${g.leaves.length} 项 · ${warns?warns+' 告警':'全部正常'}</span></div>
+      <div class="tree-leaves">${g.leaves.map(l=>`
+        <div class="leaf"><span class="ld ${l.s}"></span><span class="ln">${l.n}</span><span class="lst ${l.s}">${sl[l.s]}</span></div>`).join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════ Chiller panel ═══════════ */
+function populateChiller(){
+  const sel=document.getElementById('ch-sel');
+  sel.innerHTML=Object.keys(DB).map(k=>`<option value="${k}">${DB[k].brand} ${DB[k].model} — 额定COP ${DB[k].ref_COP}</option>`).join('');
+}
+function chillerUpdate(){
+  const d=DB[document.getElementById('ch-sel').value]; if(!d)return;
+  const meas=parseInt(document.getElementById('ch-cop').value)/10;
+  const PLR=parseInt(document.getElementById('ch-plr').value)/100;
+  const Tchws=parseInt(document.getElementById('ch-tchws').value)/10;
+  const Tcws=parseInt(document.getElementById('ch-tcws').value)/10;
+  document.getElementById('chv-cop').textContent=meas.toFixed(2);
+  document.getElementById('chv-plr').textContent=Math.round(PLR*100)+'%';
+  document.getElementById('chv-tchws').textContent=Tchws.toFixed(1)+' °C';
+  document.getElementById('chv-tcws').textContent=Tcws.toFixed(1)+' °C';
+  document.getElementById('ch-tags').innerHTML=[
+    `<span class="badge b-teal">${d.compressor}</span>`,`<span class="badge b-blue">${d.unloading}</span>`,
+    `<span class="badge b-gray">${d.cap_RT} RT</span>`,`<span class="badge b-gray">额定 COP ${d.ref_COP}</span>`].join('');
+
+  const exp=calcCOP(d,PLR,Tchws,Tcws).COP;
+  const gap=meas-exp, gapPct=(gap/exp*100).toFixed(1);
+  document.getElementById('ch-exp').textContent=exp.toFixed(2);
+  const gEl=document.getElementById('ch-gap');
+  gEl.textContent=(gap>=0?'+':'')+gapPct+'%';
+  gEl.className='big '+(gap>=-0.3?'teal':gap>=-0.8?'amber':'red');
+  const {iplv}=calcIPLV(d), g=iplvGrade(iplv);
+  document.getElementById('ch-iplv').textContent=iplv.toFixed(2);
+  document.getElementById('ch-grade').innerHTML=`<span class="badge b-${g.c}">${g.l}</span>`;
+
+  const plrs=[0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0], cops=plrs.map(p=>calcCOP(d,p,Tchws,Tcws).COP), maxC=Math.max(...cops);
+  document.getElementById('ch-bars').innerHTML=cops.map((c,i)=>{
+    const active=Math.abs(plrs[i]-PLR)<0.06, cls=c<maxC*0.72?'weak':'';
+    return `<div class="chain-bar"><span class="cl" style="min-width:38px">${Math.round(plrs[i]*100)}%</span>
+      <div class="cbg"><div class="cf ${cls}" style="width:${(c/maxC*100).toFixed(0)}%;${active?'outline:1.5px solid var(--accent);outline-offset:1px':''}"></div></div>
+      <span class="cv" style="${active?'color:var(--accent-fg);font-weight:600':''}">${c.toFixed(2)}</span></div>`;
+  }).join('');
+
+  let v='';
+  if(gap<-0.8)v=`<div class="note" style="color:var(--red-fg)">实测 COP ${meas.toFixed(2)} 显著低于工况预期 ${exp.toFixed(2)}(${gapPct}%)。在当前 Tcws ${Tcws.toFixed(1)}°C 下仍偏低,优先排查冷凝器结垢、冷媒量、压缩机效率。</div>`;
+  else if(gap<-0.3)v=`<div class="note" style="color:var(--amber-fg)">实测低于工况预期 ${gapPct}%。若冷却水进水温度偏高(当前 ${Tcws.toFixed(1)}°C),应先优化冷却塔与冷却水温,再判断主机本体。</div>`;
+  else v=`<div class="note" style="color:var(--green-fg)">实测 COP 与工况预期偏差 ${gapPct}%,处于合理范围,主机本体性能正常。</div>`;
+  if(Tcws>32)v+=`<div class="note" style="margin-top:8px">冷凝器进水 ${Tcws.toFixed(1)}°C 已超 32°C,每升高 1°C 主机 COP 约下降 2~3%——这正是「冷却塔散热不足拉低主机能效」的量化体现。</div>`;
+  document.getElementById('ch-verdict').innerHTML=v;
+}
+
+/* ═══════════ Energy panel ═══════════ */
+let eChart=null;
+function populateEnergySub(){
+  const r=STD[document.getElementById('e-region').value];
+  document.getElementById('e-sub').innerHTML=r.hospital.map((h,i)=>`<option value="${i}">${h.n}</option>`).join('');
+}
+function energyUpdate(){
+  const r=STD[document.getElementById('e-region').value];
+  if(document.getElementById('e-sub').dataset.region!==document.getElementById('e-region').value){
+    populateEnergySub(); document.getElementById('e-sub').dataset.region=document.getElementById('e-region').value;
+  }
+  const sub=r.hospital[parseInt(document.getElementById('e-sub').value)||0];
+  const actual=parseInt(document.getElementById('e-actual').value);
+  document.getElementById('ev-actual').textContent=actual;
+  document.getElementById('e-std-tag').textContent=r.tag;
+
+  const overC=actual-sub.c, level=actual<=sub.g?'引导级':actual<=sub.c?'约束达标':'超约束值';
+  const lc=actual<=sub.g?'green':actual<=sub.c?'blue':'red';
+  document.getElementById('e-metrics').innerHTML=`
+    <div class="metric"><div class="metric-label">约束值</div><div class="metric-value amber" style="font-size:22px">${sub.c}</div><div class="metric-sub">kWh/m² · 能耗上限</div></div>
+    <div class="metric"><div class="metric-label">引导值</div><div class="metric-value green" style="font-size:22px">${sub.g}</div><div class="metric-sub">kWh/m² · 节能目标</div></div>
+    <div class="metric"><div class="metric-label">对标结论</div><div class="metric-value ${lc}" style="font-size:15px;margin-top:5px">${level}</div><div class="metric-sub">${overC>0?'超约束 '+overC:'余量 '+(-overC)} kWh/m²</div></div>`;
+
+  let v='';
+  if(actual>sub.c)v=`<div class="note" style="color:var(--red-fg)">实测 ${actual} kWh/m² 超过约束值 ${sub.c},超出 ${overC} kWh/m²。需结合主机能效与冷却塔诊断结论,优先压降冷站环节能耗。</div>`;
+  else if(actual>sub.g)v=`<div class="note" style="color:var(--blue-fg)">实测 ${actual} kWh/m² 在约束值内但高于引导值 ${sub.g},距节能目标尚有 ${actual-sub.g} kWh/m² 空间。</div>`;
+  else v=`<div class="note" style="color:var(--green-fg)">实测 ${actual} kWh/m² 已优于引导值 ${sub.g},处于高效区间。</div>`;
+  v+=`<div class="note" style="margin-top:8px">对标维度:横向(同区域同类医院)、标准(${r.tag} 约束/引导值)。叠加纵向同比可定位异常时段。</div>`;
+  document.getElementById('e-verdict').innerHTML=v;
+
+  const ctx=document.getElementById('e-chart').getContext('2d');
+  if(eChart)eChart.destroy();
+  eChart=new Chart(ctx,{type:'bar',
+    data:{labels:['引导值','约束值','本项目实测'],datasets:[{data:[sub.g,sub.c,actual],
+      backgroundColor:['#10b981','#f59e0b',actual>sub.c?'#ef4444':actual>sub.g?'#3b82f6':'#10b981'],borderWidth:0,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.parsed.y+' kWh/m²'}}},
+      scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#6b7280',font:{family:'Inter',size:10}}},
+        x:{grid:{display:false},ticks:{color:'#374151',font:{family:'Inter',size:11},font:{weight:'500'}}}}}});
+}
+
+/* ═══════════ Chat ═══════════ */
+const QA=[
+  {k:['主机','能效','偏低','cop'],a:'主机实测 COP 6.70,经工况修正后该工况(PLR 65%、Tcws 33.5°C)预期约 7.3,偏差约 -8.5%。关键判断:在冷却水进水温度偏高(冷却塔散热不足)的条件下,这种偏差更可能是「运行工况问题」而非主机本体衰减——每升高 1°C 冷却水温,主机 COP 约降 2.5%。把冷却水温降到 30°C,模型工况预期 COP 会升到约 8.0,这说明缺口主要由冷却侧驱动。所以应先治冷却塔、降冷却水温,再复核主机;若那时 COP 仍不回升,才排查冷凝器结垢、冷媒量、压缩机。'},
+  {k:['基线','偏差','10812','异常','计量'],a:'当日用能 11292.2 kWh,比预测基线高 10812 kWh,实测约为预测的 23 倍。这个量级用真实负荷激增很难解释,异常检测判定为「高偏离」,数据校核进一步指向两类成因:① 电能计量回路异常(互感器/表计);② 基线预测模型欠训练或特征缺失。建议先校核计量回路,再用近 30 天数据重训练基线,恢复预测可信度后偏差预警才有意义。'},
+  {k:['冷却塔','省','收益','建议','测算','多少'],a:'提升冷却塔能效是收益链条的起点:清洗填料/布水 + 提高风机转速 + 建立冷却水温-室外湿球联动,预计冷却水进水温度下降 1~2°C;按每降 1°C 主机 COP 升约 2~3% 估算,主机 COP 可回升 0.5~0.7,系统能效相应提升约 5~8%。这是「冷却塔→主机→系统」主链上一次治理、多级受益。'},
+  {k:['规则','数据','引擎','分工','双'],a:'双引擎分工:专家规则引擎负责有明确物理判据的问题——本次在「单位面积能耗」「冷热负荷时长分布」「冷却水侧不平衡」「冷却塔出水温度传感器」「电能计量回路」命中告警;数据驱动引擎负责量化偏差与发现未知问题——基线预测发现用能偏差、异常检测判定高偏离、主机能效对标算出 -9.5% 偏差。两路结果在智能体编排层做根因推理,汇成「冷却塔散热不足」与「基线/计量异常」两条主线。'},
+  {k:['冷却塔','拉低','为什么','耦合'],a:'冷却塔散热不足 → 冷却水回到冷凝器的进水温度升高 → 主机冷凝压力上升、压缩机做功增加 → 同样制冷量下耗功更多、COP 下降。这是一个物理耦合:能效链上看是「冷却塔环节弱」,主机对标上看是「COP 低于工况预期」,两者其实是同一根因的两个观测面——这正是智能体把两个引擎的发现连成一条因果链的价值。'},
+];
+function chatPush(role,txt,cls){
+  const h=document.getElementById('chat-hist');
+  h.innerHTML+=`<div class="cmsg"><div class="crole">${role}</div><div class="cbub ${cls}">${txt}</div></div>`;
+  h.scrollTop=h.scrollHeight;
+}
+function answer(q){
+  let best=null,score=0;
+  for(const item of QA){const s=item.k.filter(k=>q.toLowerCase().includes(k.toLowerCase())).length;if(s>score){score=s;best=item;}}
+  return best&&score>0?best.a:'本次诊断聚焦冷站系统(2026-06-13),核心结论为冷却塔散热不足与基线/计量异常两条主线。可以问我:主机能效为何偏低、基线偏差说明什么、冷却塔治理收益、或双引擎各自的发现。';
+}
+function chatSend(){
+  const inp=document.getElementById('chat-in'),q=inp.value.trim(); if(!q)return;
+  chatPush('我',q,'me'); inp.value='';
+  setTimeout(()=>chatPush('智能体',answer(q),'ai'),320);
+}
+function qChat(q){document.getElementById('chat-in').value=q;chatSend();}
+
+/* ═══════════ Routing ═══════════ */
+function go(name,btn){
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('p-'+name).classList.add('active');
+  const T={home:'智能诊断台',rule:'专家规则诊断',chiller:'主机能效对标',energy:'能耗对标',chat:'诊断助手'};
+  document.getElementById('tb-title').textContent=T[name];
+  if(name==='chiller')chillerUpdate();
+  if(name==='energy')energyUpdate();
+}
+
+/* init */
+(function(){const cd=chillerDiag();
+  document.getElementById('k-chiller-sub').textContent=`工况预期 ${cd.expCur.toFixed(1)} · ${(cd.gapPct>=0?'+':'')+cd.gapPct.toFixed(1)}%`;
+})();
+renderPipe(); renderRuleTree(); populateChiller(); chillerUpdate();
+document.getElementById('e-sub').dataset.region='';
+populateEnergySub(); energyUpdate();
+</script>
+</body>
+</html>
