@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>诊断追踪 · 冷却塔能效异常诊断</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@antv/g6@4/dist/g6.min.js"></script>
+<style>
+:root{
+  --bg-body: lab(98.2598% -.636548 -1.7538);
+  --bg-card: lab(100% 0 0);
+  --bg-header: oklab(0.984998 -0.00196332 -0.00457925 / 0.85);
+  --border-color: lab(90.7188% -1.25688 -3.49852);
+  --text-primary: lab(9.39468% -1.22011 -10.5573);
+  --text-secondary: lab(47.751% -1.45984 -7.25375);
+  --green:#10b981;--amber:#f59e0b;--red:#ef4444;
+  --green-bg:#ecfdf5;--red-bg:#fef2f2;--red-fg:#991b1b;--red-stroke:#fca5a5;
+  --radius-sm:8px;--radius-full:9999px;
+  --sans:'Inter',system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px}
+body{background:var(--bg-body);color:var(--text-primary);font-family:var(--sans);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-color);border-radius:2px}
+button{font-family:inherit;cursor:pointer;border:none;background:none;font-size:inherit}
+
+.topbar{display:flex;align-items:center;gap:16px;flex-shrink:0;background:var(--bg-header);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:0.8px solid var(--border-color);padding:10px 24px;z-index:40}
+.tb-logo{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.tb-logo-icon{width:32px;height:32px;border-radius:var(--radius-sm);background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff}
+.tb-logo-text{font-size:14px;font-weight:700}
+.tb-logo-sub{font-size:9px;color:var(--text-secondary)}
+.tb-divider{width:1px;height:24px;background:var(--border-color);flex-shrink:0}
+.tb-agent{display:flex;align-items:center;gap:8px;padding:5px 14px;background:var(--bg-card);border:0.8px solid var(--border-color);border-radius:var(--radius-full);font-size:12px;white-space:nowrap}
+.tb-agent-dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+.tb-agent-dot.run{background:#6366f1;animation:glow 1s ease-in-out infinite}
+.tb-agent-dot.done{background:var(--red)}
+@keyframes glow{0%,100%{opacity:1}50%{opacity:.4}}
+.tb-meta{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.tb-meta-item{font-size:11px;color:var(--text-secondary);display:flex;align-items:center;gap:4px}
+.tb-meta-dot{width:6px;height:6px;border-radius:50%}
+.tb-meta-dot.g{background:var(--green)}.tb-meta-dot.y{background:var(--amber)}.tb-meta-dot.r{background:var(--red)}
+.tb-right{display:flex;align-items:center;gap:12px;margin-left:auto;flex-shrink:0}
+.tb-mode{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:var(--radius-full);font-size:11px;font-weight:500}
+.tb-mode.run{background:#fffbeb;color:#92400e;border:0.8px solid #fcd34d}
+.tb-mode.done{background:var(--red-bg);color:var(--red-fg);border:0.8px solid var(--red-stroke)}
+.tb-mode-dot{width:5px;height:5px;border-radius:50%}
+.tb-mode.run .tb-mode-dot{background:var(--amber);animation:glow 1.5s ease-in-out infinite}
+.tb-mode.done .tb-mode-dot{background:var(--red)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:6px 14px;border-radius:var(--radius-md);font-size:12px;font-weight:500;transition:all .15s;white-space:nowrap;font-family:inherit}
+.btn-primary{background:#6366f1;color:#fff}.btn-primary:hover{background:#5558e3}
+.btn-outline{background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-color)}
+.btn-outline:hover{border-color:#6366f1;color:#4338ca;background:#eef2ff}
+
+.canvas-wrap{flex:1;position:relative;min-height:0;overflow:hidden}
+#g6Container{width:100%;height:100%}
+
+.panel-bottom{display:none;align-items:center;gap:20px;padding:12px 24px;flex-shrink:0;border-top:2px solid var(--red-stroke);background:linear-gradient(90deg,var(--red-bg),#fff5f5,var(--bg-body))}
+.panel-bottom.show{display:flex}
+.pb-icon{width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;animation:apulse 2s ease-in-out infinite}
+@keyframes apulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}}
+.pb-body{flex:1}
+.pb-title{font-size:13px;font-weight:800;color:var(--red-fg)}
+.pb-path{font-size:11px;color:var(--text-secondary);margin-top:2px}
+.pb-path b{color:var(--red-fg)}
+.pb-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.pb-tag{font-size:10px;padding:2px 8px;border-radius:var(--radius-full);background:var(--red-bg);color:var(--red-fg);border:0.8px solid var(--red-stroke)}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="tb-logo"><div class="tb-logo-icon">⚙</div><div><div class="tb-logo-text">智慧运维诊断</div><div class="tb-logo-sub">ORG-CHART DIAGNOSTIC TRACE</div></div></div>
+  <div class="tb-divider"></div>
+  <div class="tb-agent"><div class="tb-agent-dot" id="agentDot"></div><span id="agentStatus">诊断智能体就绪</span></div>
+  <div class="tb-meta">
+    <div class="tb-meta-item"><div class="tb-meta-dot g"></div><span>通过 <b id="countOk">0</b></span></div>
+    <div class="tb-meta-item"><div class="tb-meta-dot y"></div><span>警告 <b id="countWarn">0</b></span></div>
+    <div class="tb-meta-item"><div class="tb-meta-dot r"></div><span>异常 <b id="countErr">0</b></span></div>
+  </div>
+  <div class="tb-right">
+    <div class="tb-mode run" id="tbMode"><div class="tb-mode-dot"></div><span id="tbModeText">等待启动</span></div>
+    <button class="btn btn-outline btn-sm" onclick="location.reload()" id="btnRestart">重新诊断</button>
+  </div>
+</header>
+
+<div class="canvas-wrap"><div id="g6Container"></div></div>
+
+<div class="panel-bottom" id="anomalyPanel">
+  <div class="pb-icon">⚠</div>
+  <div class="pb-body"><div class="pb-title" id="apTitle"></div><div class="pb-path" id="apPath"></div><div class="pb-tags" id="apTags"></div></div>
+</div>
+
+<script>
+(function init(){
+  if(typeof G6==='undefined'){
+    document.getElementById('g6Container').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:14px;color:#991b1b">G6 加载失败，请检查网络后刷新</div>';
+    return;
+  }
+
+  const CP='#d1d5db',CO='#10b981',CW='#f59e0b',CE='#ef4444',CC='#6366f1';
+  const EP={stroke:'#e5e7eb',lineWidth:1,opacity:0.4};
+  const EO={stroke:'#a7f3d0',lineWidth:1.5,opacity:1};
+  const EW={stroke:'#fde68a',lineWidth:2,opacity:1};
+  const EE={stroke:'#fca5a5',lineWidth:2.5,opacity:1};
+  const PF={p1:'#3b82f6',p2:'#8b5cf6',p3:'#f59e0b',p4:'#6366f1'};
+  const PS={p1:'#2563eb',p2:'#7c3aed',p3:'#d97706',p4:'#4f46e5'};
+
+  function isCJK(ch){const cp=ch.codePointAt(0);return(cp>=0x4E00&&cp<=0x9FFF)||(cp>=0x3400&&cp<=0x4DBF)||(cp>=0x3000&&cp<=0x303F)||(cp>=0xFF00&&cp<=0xFFEF);}
+  function textW(s,fs){let w=0;for(let i=0;i<s.length;i++)w+=isCJK(s[i])?fs:fs*0.55;return Math.ceil(w);}
+
+  // ═══ Tree Data ═══
+  const treeData={id:'root',label:'诊断根节点',nodeType:'root',
+  children:[
+    {id:'p1',label:'水力平衡诊断',nodeType:'phase',phase:'p1',
+    children:[{id:'p1-0',label:'冷冻水侧不平衡',nodeType:'branch',
+    children:[{id:'p1-0-0',label:'室内风柜回风温度分布',nodeType:'sub',
+    children:[{id:'p1-0-0-0',label:'大于设定值2度',nodeType:'leaf'},{id:'p1-0-0-1',label:'小于设定值2度',nodeType:'leaf'}]}]}]},
+    {id:'p2',label:'数据校核',nodeType:'phase',phase:'p2',
+    children:[
+      {id:'p2-0',label:'室外温湿度传感器有误',nodeType:'branch',children:[{id:'p2-0-0',label:'偏离负荷-室外温度趋势线10%',nodeType:'leaf'}]},
+      {id:'p2-1',label:'冷冻水供水温度传感器有误',nodeType:'branch',children:[{id:'p2-1-0',label:'与冷机面板数据不一致(10%)',nodeType:'leaf'}]},
+      {id:'p2-2',label:'冷冻水回水温度传感器有误',nodeType:'branch',children:[{id:'p2-2-0',label:'与冷机面板数据不一致(10%)',nodeType:'leaf'}]},
+      {id:'p2-3',label:'冷冻水压差传感器有误',nodeType:'branch',children:[{id:'p2-3-0',label:'偏离负荷-压差趋势线10%',nodeType:'leaf'}]},
+      {id:'p2-4',label:'冷却塔出水温度传感器有误',nodeType:'branch',children:[{id:'p2-4-0',label:'与冷机面板数据不一致(10%)',nodeType:'leaf'}]},
+      {id:'p2-5',label:'冷却塔进水温度传感器有误',nodeType:'branch',children:[{id:'p2-5-0',label:'与冷机面板数据不一致(10%)',nodeType:'leaf'}]},
+      {id:'p2-6',label:'制冷站COP与电流负载率不匹配',nodeType:'branch',children:[{id:'p2-6-0',label:'偏离COP-负载率趋势线10%',nodeType:'leaf'}]}
+    ]},
+    {id:'p3',label:'运行策略诊断',nodeType:'phase',phase:'p3',
+    children:[
+      {id:'p3-0',label:'非营业时间内运行',nodeType:'branch',children:[{id:'p3-0-0',label:'在设定时间范围以外运行',nodeType:'leaf'}]},
+      {id:'p3-1',label:'开关机策略失效',nodeType:'branch',children:[{id:'p3-1-0',label:'开机时没有达到开机条件',nodeType:'leaf'},{id:'p3-1-1',label:'达到关机条件时没有关机',nodeType:'leaf'}]},
+      {id:'p3-2',label:'加减载策略失效',nodeType:'branch',children:[{id:'p3-2-0',label:'加载时没有达到加载条件',nodeType:'leaf'},{id:'p3-2-1',label:'达到减载条件时没有减载',nodeType:'leaf'},{id:'p3-2-2',label:'达到加载条件没有成功加载',nodeType:'leaf'},{id:'p3-2-3',label:'达到减载条件没有成功减载',nodeType:'leaf'}]},
+      {id:'p3-3',label:'新风策略失效',nodeType:'branch',children:[{id:'p3-3-0',label:'室外温度低时未使用新风',nodeType:'leaf'}]},
+      {id:'p3-4',label:'负荷稳定性诊断',nodeType:'branch',warn:true,children:[{id:'p3-4-0',label:'2σ外：湿球温度-能耗',nodeType:'leaf'},{id:'p3-4-1',label:'偏离湿球-能耗趋势线10%',nodeType:'leaf'},{id:'p3-4-2',label:'偏离湿球-制冷量趋势线10%',nodeType:'leaf'}]}
+    ]},
+    {id:'p4',label:'系统能效与群控诊断',nodeType:'phase',phase:'p4',
+    children:[
+      {id:'e0',label:'系统能效低',nodeType:'group',section:'能效',children:[{id:'e0-0',label:'负载率',nodeType:'sub',children:[{id:'e0-0-0',label:'2σ外运行点',nodeType:'leaf'},{id:'e0-0-1',label:'COP-负载率偏离10%',nodeType:'leaf'}]},{id:'e0-1',label:'湿球温度',nodeType:'sub',children:[{id:'e0-1-0',label:'2σ外运行点',nodeType:'leaf'},{id:'e0-1-1',label:'COP-湿球偏离10%',nodeType:'leaf'}]}]},
+      {id:'e1',label:'冷水机组能效低',nodeType:'group',section:'能效',children:[{id:'e1-0',label:'蒸发温度',nodeType:'sub',children:[{id:'e1-0-0',label:'2σ外运行点',nodeType:'leaf'},{id:'e1-0-1',label:'偏离趋势线10%',nodeType:'leaf'}]},{id:'e1-1',label:'冷凝温度',nodeType:'sub',children:[{id:'e1-1-0',label:'2σ外运行点',nodeType:'leaf'},{id:'e1-1-1',label:'偏离趋势线10%',nodeType:'leaf'}]},{id:'e1-2',label:'负荷率',nodeType:'sub',children:[{id:'e1-2-0',label:'高效区间外(70%~100%)',nodeType:'leaf'},{id:'e1-2-1',label:'2σ外运行点',nodeType:'leaf'}]},{id:'e1-3',label:'负载率',nodeType:'sub',children:[{id:'e1-3-0',label:'2σ外运行点',nodeType:'leaf'},{id:'e1-3-1',label:'偏离趋势线10%',nodeType:'leaf'}]}]},
+      {id:'e2',label:'冷冻泵能效低',nodeType:'group',section:'能效',children:[{id:'e2-0',label:'流量',nodeType:'sub',children:[{id:'e2-0-0',label:'2σ外运行点',nodeType:'leaf'},{id:'e2-0-1',label:'30%以上在高效区间外',nodeType:'leaf'}]},{id:'e2-1',label:'频率',nodeType:'sub',children:[{id:'e2-1-0',label:'2σ外运行点',nodeType:'leaf'}]},{id:'e2-2',label:'室外湿球温度',nodeType:'sub',children:[{id:'e2-2-0',label:'2σ外运行点',nodeType:'leaf'},{id:'e2-2-1',label:'COP-湿球偏离10%',nodeType:'leaf'}]},{id:'e2-3',label:'冷冻水供回水温差',nodeType:'sub',children:[{id:'e2-3-0',label:'2σ外运行点',nodeType:'leaf'},{id:'e2-3-1',label:'COP-温差偏离10%',nodeType:'leaf'}]},{id:'e2-4',label:'组合式运行策略',nodeType:'sub',children:[{id:'e2-4-0',label:'N对N泵策略未触发',nodeType:'leaf'}]}]},
+      {id:'e3',label:'冷却泵能效低',nodeType:'group',section:'能效',children:[{id:'e3-0',label:'流量',nodeType:'sub',children:[{id:'e3-0-0',label:'2σ外运行点',nodeType:'leaf'},{id:'e3-0-1',label:'30%以上在高效区间外',nodeType:'leaf'}]},{id:'e3-1',label:'频率',nodeType:'sub',children:[{id:'e3-1-0',label:'2σ外运行点',nodeType:'leaf'}]},{id:'e3-2',label:'室外湿球温度',nodeType:'sub',children:[{id:'e3-2-0',label:'2σ外运行点',nodeType:'leaf'},{id:'e3-2-1',label:'COP-湿球偏离10%',nodeType:'leaf'}]},{id:'e3-3',label:'冷却水供回水温差',nodeType:'sub',children:[{id:'e3-3-0',label:'2σ外运行点',nodeType:'leaf'},{id:'e3-3-1',label:'COP-温差偏离10%',nodeType:'leaf'}]},{id:'e3-4',label:'组合式运行策略',nodeType:'sub',children:[{id:'e3-4-0',label:'N对N泵策略未触发',nodeType:'leaf'}]}]},
+      {id:'e4',label:'冷却塔能效低',nodeType:'group',section:'能效',anomaly:true,children:[{id:'e4-0',label:'室外湿球温度',nodeType:'sub',children:[{id:'e4-0-0',label:'2σ外运行点',nodeType:'leaf'},{id:'e4-0-1',label:'COP-湿球偏离10%',nodeType:'leaf'}]},{id:'e4-1',label:'负载率',nodeType:'sub',children:[{id:'e4-1-0',label:'2σ外运行点',nodeType:'leaf'},{id:'e4-1-1',label:'COP-负载率偏离10%',nodeType:'leaf'}]}]},
+      {id:'g0',label:'冷冻水供水温度设定值不合理',nodeType:'group',section:'群控',children:[{id:'g0-0',label:'冷水机组负载率',nodeType:'sub',children:[{id:'g0-0-0',label:'偏离趋势线10%',nodeType:'leaf'}]},{id:'g0-1',label:'室外湿球温度',nodeType:'sub',children:[{id:'g0-1-0',label:'偏离趋势线10%',nodeType:'leaf'}]}]},
+      {id:'g1',label:'冷却水供水温度设定值不合理',nodeType:'group',section:'群控',children:[{id:'g1-0',label:'室外湿球温度',nodeType:'sub',children:[{id:'g1-0-0',label:'偏离趋势线10%',nodeType:'leaf'}]},{id:'g1-1',label:'冷水机组负载率',nodeType:'sub',children:[{id:'g1-1-0',label:'偏离趋势线10%',nodeType:'leaf'}]}]},
+      {id:'g2',label:'冷冻水供回水压差/温差不合理',nodeType:'group',section:'群控',children:[{id:'g2-0',label:'室外湿球温度',nodeType:'sub',children:[{id:'g2-0-0',label:'偏离趋势线10%',nodeType:'leaf'}]},{id:'g2-1',label:'冷水机组负载率',nodeType:'sub',children:[{id:'g2-1-0',label:'偏离趋势线10%',nodeType:'leaf'}]}]},
+      {id:'g3',label:'冷却水供回水温差不合理',nodeType:'group',section:'群控',children:[{id:'g3-0',label:'冷水机组负载率',nodeType:'sub',children:[{id:'g3-0-0',label:'偏离趋势线10%',nodeType:'leaf'}]},{id:'g3-1',label:'室外湿球温度',nodeType:'sub',children:[{id:'g3-1-0',label:'偏离趋势线10%',nodeType:'leaf'}]}]},
+      {id:'g4',label:'风侧供回风温差/静压/回风温度不合理',nodeType:'group',section:'群控',children:[{id:'g4-0',label:'室外湿球温度',nodeType:'sub',children:[{id:'g4-0-0',label:'偏离趋势线10%',nodeType:'leaf'}]},{id:'g4-1',label:'冷水机组负载率',nodeType:'sub',children:[{id:'g4-1-0',label:'偏离趋势线10%',nodeType:'leaf'}]}]}
+    ]}
+  ]};
+
+  const nodeMap={};
+  (function cm(n){nodeMap[n.id]=n;if(n.children)n.children.forEach(cm)})(treeData);
+
+  // ═══ Register custom nodes ═══
+  G6.registerNode('card-node',{
+    getAnchorPoints(){return [[0.5,0],[0.5,1],[0,0.5],[1,0.5]];},
+    draw(cfg,group){
+      const w=cfg.size[0],h=cfg.size[1],r=h/2;
+      const fill=cfg.style.fill,stroke=cfg.style.stroke,lw=cfg.style.lineWidth||1;
+      const keyShape=group.addShape('rect',{attrs:{x:-w/2,y:-h/2,width:w,height:h,radius:r,fill,stroke,lineWidth:lw,cursor:'pointer'},name:'card-box',draggable:true});
+      if(cfg.label){
+        group.addShape('text',{attrs:{x:0,y:0,text:cfg.label,fontSize:cfg.labelCfg.style.fontSize,fontWeight:cfg.labelCfg.style.fontWeight,fill:cfg.labelCfg.style.fill,textAlign:'center',textBaseline:'middle',fontFamily:'Inter,PingFang SC,Microsoft YaHei,sans-serif'},name:'card-label',draggable:true});
+      }
+      return keyShape;
+    },
+    update(cfg,item){
+      const g=item.getContainer();
+      const box=g.find(e=>e.get('name')==='card-box'),lbl=g.find(e=>e.get('name')==='card-label');
+      if(box)box.attr({fill:cfg.style.fill,stroke:cfg.style.stroke,lineWidth:cfg.style.lineWidth});
+      if(lbl&&cfg.labelCfg)lbl.attr({text:cfg.label,fontSize:cfg.labelCfg.style.fontSize,fontWeight:cfg.labelCfg.style.fontWeight,fill:cfg.labelCfg.style.fill});
+    }
+  },'single-shape');
+
+  G6.registerNode('vtext-node',{
+    getAnchorPoints(){return [[0.5,0],[0.5,1],[0,0.5],[1,0.5]];},
+    draw(cfg,group){
+      const label=cfg.label||'',fs=cfg.labelCfg.style.fontSize;
+      const fill=cfg.style.fill,stroke=cfg.style.stroke,lw=cfg.style.lineWidth||1;
+      const isLeaf=cfg.nodeType==='leaf';
+      const dotR=isLeaf?3:4,charH=fs+2,gap=1;
+      const textH=charH*label.length+gap*(label.length-1);
+      const topPad=dotR*2+3,totalH=topPad+textH+5;
+      const cardW=isLeaf?14:18,r=cardW/2;
+
+      const keyShape=group.addShape('rect',{attrs:{x:-cardW/2,y:-totalH/2,width:cardW,height:totalH,radius:r,fill,stroke,lineWidth:lw,cursor:'pointer'},name:'vt-box',draggable:true});
+      group.addShape('circle',{attrs:{x:0,y:-totalH/2+dotR+2,r:dotR,fill:'#fff',opacity:0.6},name:'vt-dot',draggable:true});
+      for(let i=0;i<label.length;i++){
+        group.addShape('text',{attrs:{x:0,y:(-totalH/2)+topPad+i*(charH+gap),text:label[i],fontSize:fs,fontWeight:cfg.labelCfg.style.fontWeight,fill:cfg.labelCfg.style.fill,textAlign:'center',textBaseline:'top',fontFamily:'Inter,PingFang SC,Microsoft YaHei,sans-serif'},name:'vt-ch-'+i,draggable:true});
+      }
+      return keyShape;
+    },
+    update(cfg,item){
+      const g=item.getContainer();
+      const box=g.find(e=>e.get('name')==='vt-box');
+      if(box)box.attr({fill:cfg.style.fill,stroke:cfg.style.stroke,lineWidth:cfg.style.lineWidth});
+      const chars=cfg.label||'';
+      g.findAll(e=>e.get('name')&&e.get('name').startsWith('vt-ch-')).forEach((sh,i)=>{if(i<chars.length)sh.attr({text:chars[i],fill:cfg.labelCfg.style.fill});});
+    }
+  },'single-shape');
+
+  // ═══ Apply visual: adaptive widths ═══
+  function applyVisual(node){
+    const nt=node.nodeType,lb=node.label;
+    if(nt==='root'){
+      const fs=13,px=16;node.type='card-node';node.size=[textW(lb,fs)+px*2,30];
+      node.style={fill:CP,stroke:CP,lineWidth:1};node.labelCfg={style:{fontSize:fs,fontWeight:700,fill:'#9ca3af'}};
+    }else if(nt==='phase'){
+      const fs=11,px=16;node.type='card-node';node.size=[textW(lb,fs)+px*2,28];
+      node.style={fill:CP,stroke:CP,lineWidth:1};node.labelCfg={style:{fontSize:fs,fontWeight:700,fill:'#9ca3af'}};
+    }else if(nt==='group'){
+      const fs=10,px=14;node.type='card-node';node.size=[textW(lb,fs)+px*2,24];
+      node.style={fill:CP,stroke:CP,lineWidth:1};node.labelCfg={style:{fontSize:fs,fontWeight:600,fill:'#9ca3af'}};
+    }else if(nt==='branch'){
+      const fs=10,px=14;node.type='card-node';node.size=[textW(lb,fs)+px*2,22];
+      node.style={fill:CP,stroke:CP,lineWidth:1.2};node.labelCfg={style:{fontSize:fs,fontWeight:500,fill:'#9ca3af'}};
+    }else if(nt==='sub'){
+      const fs=9,dotR=4,charH=fs+2,gap=1;
+      const textH=charH*lb.length+gap*(lb.length-1),totalH=dotR*2+3+textH+5;
+      node.type='vtext-node';node.size=[18,totalH];node._fs=fs;
+      node.style={fill:CP,stroke:CP,lineWidth:1};node.labelCfg={style:{fontSize:fs,fontWeight:500,fill:'#9ca3af'}};
+    }else{
+      const fs=8,dotR=3,charH=fs+2,gap=1;
+      const textH=charH*lb.length+gap*(lb.length-1),totalH=dotR*2+3+textH+5;
+      node.type='vtext-node';node.size=[14,totalH];node._fs=fs;
+      node.style={fill:CP,stroke:CP,lineWidth:1};node.labelCfg={style:{fontSize:fs,fontWeight:400,fill:'#9ca3af'}};
+    }
+    if(node.children)node.children.forEach(applyVisual);
+  }
+  applyVisual(treeData);
+
+  // ═══ Graph: compactBox layout ═══
+  const container=document.getElementById('g6Container');
+  const vw=container.clientWidth||window.innerWidth;
+  const vh=container.clientHeight||window.innerHeight-52;
+
+  const graph=new G6.TreeGraph({
+    container:'g6Container',
+    width:vw,
+    height:vh,
+    modes:{default:['drag-canvas','zoom-canvas']},
+    defaultNode:{type:'card-node',size:[120,22],style:{fill:CP,stroke:CP,lineWidth:1},labelCfg:{style:{fontSize:10,fill:'#9ca3af'}}},
+    defaultEdge:{type:'hvh',style:EP},
+    layout:{
+      type:'compactBox',
+      direction:'TB',
+      getId(d){return d.id;},
+      getWidth(d){return d.size?d.size[0]:120;},
+      getHeight(d){return d.size?d.size[1]:22;},
+      getVGap(){return 16;},
+      getHGap(){return 10;}
+    },
+    fitView:true,
+    fitViewPadding:60,
+    animate:false
+  });
+
+  graph.data(treeData);
+  graph.render();
+  console.log('G6 compactBox rendered, nodes:',graph.getNodes().length);
+
+  // ═══ Diag order ═══
+  const fullOrder=['root'];
+  function co(n){fullOrder.push(n.id);if(n.children)n.children.forEach(co);}
+  treeData.children.forEach(co);
+
+  // ═══ Style helpers ═══
+  function sc(fill,stroke,labelColor,weight,lw){
+    return{style:{fill,stroke,lineWidth:lw||1.5},labelCfg:{style:{fontWeight:weight,fill:labelColor}}};
+  }
+  function sv(fill,stroke,labelColor,lw){
+    return{style:{fill,stroke,lineWidth:lw||1.5},labelCfg:{style:{fill:labelColor}}};
+  }
+  function getNodeStyle(nm,status){
+    const nt=nm.nodeType,card=(nt==='root'||nt==='phase'||nt==='group'||nt==='branch');
+    if(status==='pending')return card?sc(CP,CP,'#9ca3af',(nt==='phase'||nt==='root')?700:600,1.2):sv(CP,CP,'#9ca3af',1);
+    if(status==='ok'){
+      if(nt==='phase')return sc(PF[nm.phase]||'#6366f1',PS[nm.phase]||'#4f46e5','#fff',700);
+      if(nt==='root')return sc('#6366f1','#4f46e5','#fff',700);
+      return card?sc(CO,'#059669','#fff',600):sv(CO,'#059669','#065f46');
+    }
+    if(status==='warn')return card?sc(CW,'#d97706','#fff',700):sv(CW,'#d97706','#92400e');
+    if(status==='err')return card?sc(CE,'#dc2626','#fff',700,2.5):sv(CE,'#dc2626','#991b1b',2);
+    if(status==='checking')return card?sc(CC,'#4f46e5','#fff',700):sv(CC,'#4f46e5','#fff');
+  }
+
+  function setNode(id,status){
+    const nm=nodeMap[id];if(!nm)return;nm.status=status;
+    const item=graph.findById(id);if(!item)return;
+    const s=getNodeStyle(nm,status);
+    graph.updateItem(item,{style:s.style,labelCfg:s.labelCfg});
+  }
+  function setEdge(s,t,sty){
+    for(const e of graph.getEdges()){const m=e.getModel();if(m.source===s&&m.target===t){graph.updateItem(e,{style:sty});return;}}
+  }
+  function setChildrenEdges(pid,sty){
+    const nm=nodeMap[pid];if(!nm||!nm.children)return;
+    nm.children.forEach(c=>setEdge(pid,c.id,sty));
+  }
+  function setDownstreamEdges(nid,sty){
+    const nm=nodeMap[nid];if(!nm)return;
+    setChildrenEdges(nid,sty);
+    if(nm.children)nm.children.forEach(c=>setDownstreamEdges(c.id,sty));
+  }
+  function findParentId(nid){
+    for(const[pid,pn]of Object.entries(nodeMap)){if(pn.children&&pn.children.some(c=>c.id===nid))return pid;}
+    return null;
+  }
+
+  let o=0,w=0,e_=0;
+  function upd(){document.getElementById('countOk').textContent=o;document.getElementById('countWarn').textContent=w;document.getElementById('countErr').textContent=e_;}
+  function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+  // ═══ Diagnosis ═══
+  async function runDiagnosis(){
+    const btn=document.getElementById('btnRestart');btn.textContent='诊断中…';
+    document.getElementById('anomalyPanel').classList.remove('show');
+    document.getElementById('tbMode').className='tb-mode run';
+    document.getElementById('tbModeText').textContent='诊断追踪中';
+    document.getElementById('agentDot').className='tb-agent-dot run';
+    document.getElementById('agentStatus').textContent='诊断智能体运行中…';
+    o=0;w=0;e_=0;upd();
+
+    // Reset to pending and collapse all phases
+    Object.values(nodeMap).forEach(nm=>nm.status='pending');
+    graph.getNodes().forEach(item=>{const m=item.getModel();const nm=nodeMap[m.id];if(nm){const s=getNodeStyle(nm,'pending');graph.updateItem(item,{style:s.style,labelCfg:s.labelCfg});}});
+    graph.getEdges().forEach(e=>graph.updateItem(e,{style:EP}));
+
+    try{graph.collapseChild('p1');}catch(e){console.warn(e)}
+    try{graph.collapseChild('p2');}catch(e){console.warn(e)}
+    try{graph.collapseChild('p3');}catch(e){console.warn(e)}
+    try{graph.collapseChild('p4');}catch(e){console.warn(e)}
+
+    graph.fitView(20,{duration:300});
+    await sleep(800);
+
+    const total=fullOrder.length;
+    for(let i=0;i<total;i++){
+      const id=fullOrder[i],nm=nodeMap[id];if(!nm)continue;
+      // Expand parent to make this node visible
+      const pid=findParentId(id);
+      if(pid){
+        try{graph.expandChild(pid);graph.layout();}catch(e){console.warn('expand parent',pid,e)}
+      }
+      await sleep(60);
+
+      let status='ok',isA=!!nm.anomaly,isW=!!nm.warn;
+      if(!isA&&!isW){let cur=nm;for(let li=0;li<20;li++){const ppid=findParentId(cur.id);if(!ppid||ppid==='root')break;const pn=nodeMap[ppid];if(pn&&pn.anomaly){isA=true;break;}cur=pn;}}
+      if(isA)status='err';else if(isW)status='warn';
+
+      setNode(id,'checking');
+      document.getElementById('agentStatus').textContent='检查: '+nm.label+' ('+(i+1)+'/'+total+')';
+
+      const delay=nm.nodeType==='leaf'?60:(nm.nodeType==='phase'?350:150);
+      await sleep(delay);
+
+      setNode(id,status);
+
+      // Expand node to reveal its children
+      if(nm.children&&nm.children.length>0){
+        try{graph.expandChild(id);graph.layout();}catch(e){console.warn('expand self',id,e)}
+      }
+
+      if(status==='ok'){if(nm.nodeType!=='leaf')setChildrenEdges(id,EO);o++;}
+      else if(status==='warn'){if(nm.nodeType!=='leaf')setChildrenEdges(id,EW);w++;}
+      else if(status==='err'){const ePid=findParentId(id);if(ePid)setEdge(ePid,id,EE);if(nm.nodeType!=='leaf')setDownstreamEdges(id,EE);e_++;}
+
+      upd();
+      if(status==='err'&&nm.anomaly)await sleep(300);
+    }
+
+    document.getElementById('tbMode').className='tb-mode done';
+    document.getElementById('tbModeText').textContent='发现异常';
+    document.getElementById('agentDot').className='tb-agent-dot done';
+    document.getElementById('agentStatus').textContent='诊断完成 — 冷却塔能效低分支异常';
+
+    const ap=document.getElementById('anomalyPanel');ap.classList.add('show');
+    document.getElementById('apTitle').textContent='异常分支：冷却塔能效低';
+    document.getElementById('apPath').innerHTML='诊断路径：系统能效与群控诊断 → <b>冷却塔能效低</b> → 室外湿球温度 / 负载率';
+    document.getElementById('apTags').innerHTML='<span class="pb-tag">冷却塔COP-湿球温度偏离10%</span><span class="pb-tag">冷却塔COP-负载率偏离10%</span><span class="pb-tag">室外湿球温度 2σ异常</span><span class="pb-tag">负载率 2σ异常</span>';
+    await sleep(800);btn.textContent='重新诊断';
+  }
+
+  window.addEventListener('resize',()=>{const cw=container.clientWidth,ch=container.clientHeight;if(cw>0&&ch>0)graph.changeSize(cw,ch);});
+  setTimeout(runDiagnosis,1000);
+})();
+</script>
+</body>
+</html>
