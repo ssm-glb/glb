@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AI自定义报表系统</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-body: lab(98.2598% -.636548 -1.7538);
+  --bg-card: lab(100% 0 0);
+  --bg-header: oklab(0.984998 -0.00196332 -0.00457925 / 0.85);
+  --bg-sidebar: lab(99.5% -.3 -0.8);
+  --bg-subtle: lab(96% 0 0);
+  --bg-hover: lab(96% 0 0);
+  --bg-dropzone: lab(97.5% 0 0);
+  --border-color: lab(90.7188% -1.25688 -3.49852);
+  --border-light: lab(93% -0.5 -1%);
+  --text-primary: lab(9.39468% -1.22011 -10.5573);
+  --text-secondary: lab(47.751% -1.45984 -7.25375);
+  --text-tertiary: lab(65% -1 -3%);
+  --text-placeholder: lab(78% -0.5 -1%);
+  --text-white: #fff;
+  --accent: #6366f1;
+  --accent-dark: #5558e3;
+  --accent-light: #eef2ff;
+  --accent-fg: #4338ca;
+  --green: #10b981; --green-bg: #ecfdf5; --green-fg: #065f46; --green-stroke: #6ee7b7; --green-light: #ecfdf5;
+  --amber: #f59e0b; --amber-bg: #fffbeb; --amber-fg: #92400e; --amber-stroke: #fcd34d; --amber-light: #fffbeb;
+  --red: #ef4444; --red-bg: #fef2f2; --red-fg: #991b1b; --red-stroke: #fca5a5; --red-light: #fef2f2;
+  --blue: #3b82f6; --blue-bg: #eff6ff; --blue-fg: #1e40af; --blue-stroke: #93c5fd; --blue-light: #eff6ff;
+  --purple: #8b5cf6; --purple-bg: #f5f3ff; --purple-fg: #5b21b6;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 20px; --r-full: 9999px;
+  --radius: 12px; --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-xl: 20px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
+  --shadow: 0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md: 0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.06);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,.1),0 4px 6px rgba(0,0,0,.05);
+  --transition: 0.15s ease;
+  --sans: 'Inter',system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg-body);color:var(--text-primary);font-family:var(--sans);font-size:13px;line-height:1.5;overflow:hidden}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-color);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#c0c4cc}
+button{font-family:inherit;cursor:pointer;border:none;background:none;font-size:inherit}
+input,select,textarea{font-family:inherit;font-size:13px;outline:none;border:1px solid var(--border-color);border-radius:var(--r-sm);padding:7px 10px;background:var(--bg-card);color:var(--text-primary)}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+select{cursor:pointer;appearance:none;padding-right:28px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%239ca3af' stroke-width='1.5'%3E%3Cpath d='M3 4.5l3 3 3-3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
+
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+.toolbar{height:48px;background:var(--bg-card);border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0;z-index:100}
+.toolbar-left{display:flex;align-items:center;gap:16px}
+.logo{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;color:var(--accent)}
+.logo svg{flex-shrink:0}
+.toolbar-actions{display:flex;align-items:center;gap:6px}
+.toolbar-right{display:flex;align-items:center;gap:12px}
+.global-params{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary)}
+.global-params input[type="date"]{padding:4px 8px;font-size:12px;width:130px}
+.global-params span{color:var(--text-placeholder)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:7px 14px;border-radius:var(--r-md);font-size:13px;font-weight:500;transition:all var(--transition);white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-dark)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{filter:brightness(1.08)}
+.btn-outline{background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-color)}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent-fg)}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-ghost{background:transparent;color:var(--text-secondary)}
+.btn-ghost:hover{background:var(--bg-hover);color:var(--text-primary)}
+.btn-accent-ghost{background:transparent;color:var(--accent);border:1px solid transparent}
+.btn-accent-ghost:hover{background:var(--accent-light)}
+.btn-accent-ghost.active{background:var(--accent-light);border-color:var(--accent)}
+.btn-success{background:var(--green);color:#fff;padding:7px 14px;border-radius:var(--r-md);font-size:13px;font-weight:500;transition:all var(--transition)}
+.btn-success:hover{filter:brightness(1.08)}
+
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:var(--r-full);white-space:nowrap}
+.b-ok{background:var(--green-bg);color:var(--green-fg)}
+.b-bl{background:var(--blue-bg);color:var(--blue-fg)}
+.b-gray{background:var(--bg-hover);color:var(--text-secondary)}
+.badge-blue{background:var(--blue-light);color:var(--blue)}
+.badge-green{background:var(--green-light);color:var(--green)}
+.badge-amber{background:var(--amber-light);color:var(--amber)}
+.badge-accent{background:var(--accent-light);color:var(--accent-fg)}
+
+.body-wrap{flex:1;display:flex;overflow:hidden}
+
+.cube-panel{width:260px;flex-shrink:0;background:var(--bg-sidebar);border-right:1px solid var(--border-color);display:flex;flex-direction:column;overflow:hidden}
+.panel-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border-light);font-weight:600;font-size:13px;flex-shrink:0}
+.panel-body{flex:1;overflow-y:auto;padding:8px 10px}
+.cube-selector{border-bottom:1px solid var(--border-light);max-height:200px;overflow-y:auto}
+.cube-option{padding:8px 14px;cursor:pointer;border-left:3px solid transparent;transition:all var(--transition)}
+.cube-option:hover{background:var(--bg-hover)}
+.cube-option.active{background:var(--accent-light);border-left-color:var(--accent)}
+.cube-option-title{font-size:13px;font-weight:500}
+.cube-option-desc{font-size:11px;color:var(--text-secondary);margin-top:2px}
+
+.field-section{margin-bottom:4px}
+.field-section-title{display:flex;align-items:center;gap:6px;padding:6px 4px;font-weight:600;font-size:11px;text-transform:uppercase;color:var(--text-secondary)}
+.field-section-title .count{font-size:10px;color:var(--text-placeholder);background:var(--bg-hover);padding:1px 6px;border-radius:8px;font-weight:400}
+
+.field-item{display:flex;align-items:center;gap:6px;padding:5px 8px;margin:2px 0;border-radius:var(--radius-sm);cursor:grab;transition:all var(--transition);border:1px solid transparent}
+.field-item:hover{background:var(--bg-hover);border-color:var(--border-light)}
+.field-item:active{cursor:grabbing}
+.field-icon{font-size:14px;flex-shrink:0}
+.field-info{flex:1;min-width:0;display:flex;flex-direction:column}
+.field-label{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.field-name{font-size:10px;color:var(--text-placeholder);font-family:monospace}
+.field-type-badge{font-size:9px;padding:1px 4px;border-radius:3px;font-weight:600;flex-shrink:0}
+.dim-badge{background:var(--blue-light);color:var(--blue)}
+.meas-badge{background:var(--green-light);color:var(--green)}
+.add-btn{width:22px;height:22px;padding:0;border-radius:3px;font-size:10px;background:transparent;color:var(--text-placeholder);border:1px solid var(--border-light);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.add-btn:hover{background:var(--bg-hover);color:var(--accent);border-color:var(--accent)}
+.add-btn-primary:hover{background:var(--green-light);color:var(--green);border-color:var(--green)}
+
+.main-area{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+.config-panel{margin:10px 14px;flex-shrink:0;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--r-xl);box-shadow:var(--shadow-sm);overflow:hidden}
+.config-body{padding:10px}
+.zone-header{font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.cube-badge{margin-left:auto}
+.zone-row{margin-bottom:8px}
+.zone-columns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:8px}
+.drop-zone{min-height:40px;border:2px dashed var(--border-color);border-radius:var(--radius-sm);padding:6px;display:flex;flex-wrap:wrap;gap:4px;align-items:flex-start;transition:all var(--transition);background:var(--bg-dropzone)}
+.drop-zone.filter-zone{min-height:44px}
+.drop-zone:hover{border-color:var(--accent)}
+.value-zone{border-color:#d1fae5}
+.value-zone:hover{border-color:var(--green)}
+
+.zone-item{display:flex;align-items:center;gap:4px;background:var(--bg-card);border:1px solid var(--border-light);border-radius:4px;padding:4px 8px;font-size:11px;box-shadow:var(--shadow-sm)}
+.value-item{background:var(--green-light);border-color:#d1fae5}
+.item-label{font-weight:500;white-space:nowrap}
+.item-field{font-size:10px;color:var(--text-placeholder);font-family:monospace}
+.remove-btn{width:18px;height:18px;padding:0;border-radius:50%;font-size:12px;line-height:1;background:transparent;color:var(--text-placeholder);border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.remove-btn:hover{background:var(--red-light);color:var(--red)}
+
+.zone-placeholder{color:var(--text-placeholder);font-size:11px;padding:10px;text-align:center;width:100%}
+.agg-select{font-size:10px;padding:1px 4px;border:1px solid var(--border-light);border-radius:3px;background:#fff;color:var(--text-secondary);appearance:auto}
+.filter-op{display:flex;align-items:center;gap:2px}
+.filter-select,.filter-input{font-size:10px;padding:1px 4px;border:1px solid var(--border-light);border-radius:3px}
+.filter-input{width:60px}
+
+.calculated-section{border-top:1px solid var(--border-light);padding-top:8px}
+.calc-editor{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.calc-input{width:100px;font-size:11px;padding:4px 6px}
+.calc-input-wide{width:200px}
+.calc-item{display:flex;align-items:center;gap:8px;padding:3px 8px;background:var(--amber-light);border-radius:4px;margin-bottom:3px;font-size:11px}
+.calc-formula{font-size:10px;color:var(--text-secondary);background:rgba(0,0,0,0.04);padding:1px 5px;border-radius:3px}
+
+.spreadsheet-view{flex:1;margin:0 14px 10px;display:flex;flex-direction:column;overflow:hidden;min-height:0;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--r-xl);box-shadow:var(--shadow-sm)}
+.view-controls{display:flex;align-items:center;gap:8px;font-size:11px}
+.view-mode-text{color:var(--amber);font-size:11px}
+
+.table-wrapper{flex:1;overflow:auto;position:relative}
+.data-table{width:max-content;min-width:100%;border-collapse:collapse;font-size:12px}
+.data-table th,.data-table td{border:1px solid var(--border-light);padding:8px 12px;text-align:right;white-space:nowrap}
+.data-table th{background:#f8fafc;font-weight:600;color:var(--text-primary);position:sticky;top:0;z-index:10}
+.corner-cell{background:#f1f5f9!important;text-align:center!important;color:var(--text-secondary);font-size:11px;z-index:15}
+.col-header{text-align:center!important}
+.row-header{text-align:left!important;font-weight:600;background:#f8fafc;position:sticky;left:0;z-index:5}
+.data-cell{color:var(--text-primary);cursor:pointer;transition:background 0.15s}
+.data-cell:hover{background:var(--accent-light)}
+.cell-high{background:#fef2f2;color:var(--red);font-weight:600}
+.cell-low{background:#eff6ff;color:var(--blue)}
+
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-secondary);gap:8px;padding:40px}
+.empty-icon{font-size:48px;opacity:0.3}
+.empty-hint{font-size:12px;color:var(--text-placeholder)}
+.loading-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--text-secondary)}
+.spinner{width:32px;height:32px;border:3px solid var(--border-light);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.ai-panel{position:fixed;top:0;right:0;width:380px;height:100vh;background:var(--bg-card);border-left:1px solid var(--border-color);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;z-index:200;transform:translateX(100%);transition:transform 0.3s ease}
+.ai-panel.open{transform:translateX(0)}
+.ai-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border-light);flex-shrink:0}
+.ai-title{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px}
+.ai-status{font-size:11px;color:var(--accent);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.ai-header-actions{display:flex;gap:4px}
+.ai-messages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+.ai-welcome{text-align:center;color:var(--text-secondary);padding:20px 0;font-size:13px;line-height:1.8}
+.quick-prompts{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.quick-prompt-btn{background:var(--bg-hover);border:1px solid var(--border-light);border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;text-align:left;color:var(--text-primary);cursor:pointer;transition:all var(--transition)}
+.quick-prompt-btn:hover{background:var(--accent-light);border-color:var(--accent)}
+.ai-msg{max-width:90%;padding:10px 12px;border-radius:var(--radius);font-size:13px;line-height:1.6}
+.ai-msg.user{align-self:flex-end;background:var(--accent);color:#fff}
+.ai-msg.user .msg-role{color:rgba(255,255,255,0.7)}
+.ai-msg.assistant{align-self:flex-start;background:var(--bg-hover);border:1px solid var(--border-light)}
+.msg-role{font-size:10px;font-weight:600;margin-bottom:4px;color:var(--text-secondary)}
+.typing-dots span{animation:blink 1.4s infinite both;font-size:20px;line-height:0}
+.typing-dots span:nth-child(2){animation-delay:0.2s}
+.typing-dots span:nth-child(3){animation-delay:0.4s}
+@keyframes blink{0%,80%,100%{opacity:0}40%{opacity:1}}
+.ai-input-area{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border-light);flex-shrink:0}
+.ai-input{flex:1;resize:none;font-size:12px;padding:8px 10px;border:1px solid var(--border-color);border-radius:var(--radius-sm);outline:none;font-family:inherit}
+.ai-input:focus{border-color:var(--accent)}
+.ai-send-btn{flex-shrink:0;height:34px}
+.ai-apply-bar{padding:10px 14px;border-top:1px solid var(--border-light);display:flex;align-items:center;gap:8px;background:var(--green-light);flex-shrink:0}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:300;display:none;align-items:center;justify-content:center;padding:24px}
+.modal-overlay.show{display:flex;animation:fadeUp .2s ease}
+.modal{background:var(--bg-card);border-radius:var(--r-xl);max-width:720px;width:100%;max-height:85vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);overflow:hidden}
+.modal.modal-sm{max-width:500px}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border-light);font-weight:600;font-size:14px;flex-shrink:0}
+.modal-body{padding:16px;overflow-y:auto;flex:1}
+.modal-ft{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--border-light);flex-shrink:0}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#111827;color:#fff;padding:10px 22px;border-radius:var(--r-md);font-size:13px;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:500;transition:transform .3s ease;pointer-events:none;display:flex;align-items:center;gap:8px}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+.mode-tabs{display:flex;gap:0;margin-bottom:16px;border:1px solid var(--border-color);border-radius:var(--radius-sm);overflow:hidden}
+.mode-tab{flex:1;padding:8px;text-align:center;background:#fff;border:none;font-size:13px;cursor:pointer;color:var(--text-secondary);transition:all var(--transition)}
+.mode-tab.active{background:var(--accent);color:#fff}
+.mode-tab:not(.active):hover{background:var(--bg-hover)}
+
+.form-group{margin-bottom:12px}
+.form-group label{display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px;font-weight:500}
+.full-input{width:100%;font-size:12px}
+.config-preview{background:var(--bg-hover);padding:8px;border-radius:4px;font-size:11px;max-height:150px;overflow:auto;white-space:pre-wrap;word-break:break-all;color:var(--text-secondary);font-family:'Cascadia Code','Consolas',monospace}
+
+.template-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto}
+.template-item{padding:10px 12px;border:1px solid var(--border-light);border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition)}
+.template-item:hover{border-color:var(--accent)}
+.template-item.active{border-color:var(--accent);background:var(--accent-light)}
+.template-item-title{font-weight:600;font-size:13px}
+.template-item-desc{font-size:11px;color:var(--text-secondary);margin-top:2px}
+.template-item-meta{display:flex;align-items:center;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--text-placeholder)}
+
+.drill-table{width:100%;border-collapse:collapse;font-size:12px}
+.drill-table th,.drill-table td{border:1px solid var(--border-light);padding:6px 10px;text-align:left}
+.drill-table th{background:#f8fafc;font-weight:600;white-space:nowrap}
+
+@media(max-width:1200px){.cube-panel{width:220px}.ai-panel{width:340px}}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        <span>AI自定义报表系统</span>
+      </div>
+      <div class="toolbar-actions">
+        <button class="btn btn-primary" id="btn-generate" onclick="generateReport()">▶ 生成报表</button>
+        <button class="btn btn-outline" onclick="openTemplateModal('save')">💾 保存模板</button>
+        <button class="btn btn-outline" onclick="openTemplateModal('load')">📂 加载模板</button>
+        <button class="btn btn-outline" onclick="exportCSV()">📥 导出CSV</button>
+        <button class="btn btn-ghost" onclick="undo()" title="撤销">↩ 撤销</button>
+        <button class="btn btn-ghost" onclick="redo()" title="重做">↪ 重做</button>
+        <button class="btn btn-ghost" onclick="clearAll()" title="清空">🗑 清空</button>
+      </div>
+    </div>
+    <div class="toolbar-right">
+      <div class="global-params">
+        <label>日期范围</label>
+        <input type="date" id="param-start" value="2026-06-01" onchange="onParamChange()">
+        <span>至</span>
+        <input type="date" id="param-end" value="2026-06-30" onchange="onParamChange()">
+      </div>
+      <button class="btn btn-accent-ghost active" id="btn-ai-toggle" onclick="toggleAIPanel()">🤖 AI助手</button>
+    </div>
+  </div>
+
+  <div class="body-wrap">
+    <aside class="cube-panel" id="cube-panel">
+      <div class="panel-header">
+        <span>数据立方体</span>
+        <button class="btn btn-ghost btn-sm" onclick="toggleCubeSelector()" id="cube-select-btn">选择立方体 ▼</button>
+      </div>
+      <div class="cube-selector" id="cube-selector" style="display:none"></div>
+      <div class="panel-body" id="field-list"></div>
+    </aside>
+
+    <div class="main-area">
+      <section class="config-panel" id="config-panel">
+        <div class="panel-header">
+          <span>透视表配置</span>
+          <span class="badge badge-accent" id="config-cube-badge" style="display:none"></span>
+        </div>
+        <div class="config-body" id="config-body">
+          <div class="zone-row">
+            <div class="zone-header"><span class="badge badge-blue">筛选区</span></div>
+            <div class="drop-zone filter-zone" id="zone-filter"
+              ondragover="onDragOver(event,'filter')" ondrop="onDrop(event,'filter')">
+              <div class="zone-placeholder">拖拽维度到此处设置筛选条件</div>
+            </div>
+          </div>
+          <div class="zone-columns">
+            <div class="zone-group col-group">
+              <div class="zone-header"><span class="badge badge-blue">列标签</span></div>
+              <div class="drop-zone col-zone" id="zone-col"
+                ondragover="onDragOver(event,'column')" ondrop="onDrop(event,'column')">
+                <div class="zone-placeholder">拖拽维度到此处作为列标签</div>
+              </div>
+            </div>
+            <div class="zone-group val-group">
+              <div class="zone-header"><span class="badge badge-green">值区</span></div>
+              <div class="drop-zone value-zone" id="zone-value"
+                ondragover="onDragOver(event,'value')" ondrop="onDrop(event,'value')">
+                <div class="zone-placeholder">拖拽度量到此处作为统计值</div>
+              </div>
+            </div>
+            <div class="zone-group row-group">
+              <div class="zone-header"><span class="badge badge-blue">行标签</span></div>
+              <div class="drop-zone row-zone" id="zone-row"
+                ondragover="onDragOver(event,'row')" ondrop="onDrop(event,'row')">
+                <div class="zone-placeholder">拖拽维度到此处作为行标签</div>
+              </div>
+            </div>
+          </div>
+          <div class="calculated-section" id="calc-section" style="display:none">
+            <div class="zone-header">
+              <span class="badge badge-amber">计算字段</span>
+              <button class="btn btn-ghost btn-sm" onclick="toggleCalcEditor()">+添加</button>
+            </div>
+            <div class="calc-editor" id="calc-editor" style="display:none">
+              <input class="calc-input" id="calc-alias" placeholder="字段别名">
+              <input class="calc-input calc-input-wide" id="calc-formula" placeholder="公式, 如: (本期-去年同期)/去年同期*100">
+              <button class="btn btn-sm btn-primary" onclick="addCalcField()">确认</button>
+            </div>
+            <div id="calc-items"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="spreadsheet-view" id="spreadsheet-view">
+        <div class="panel-header">
+          <span>数据报表</span>
+          <div class="view-controls">
+            <span class="view-mode-text" id="drill-info" style="display:none"></span>
+            <button class="btn btn-ghost btn-sm" id="btn-clear-drill" style="display:none" onclick="clearDrill()">返回</button>
+          </div>
+        </div>
+        <div class="table-wrapper" id="table-container">
+          <div class="empty-state" id="table-empty">
+            <div class="empty-icon">📊</div>
+            <p>请配置透视表并点击"生成报表"</p>
+            <p class="empty-hint">从左侧面板拖拽字段到配置区，或使用AI助手自动生成</p>
+          </div>
+          <div class="loading-state" id="table-loading" style="display:none">
+            <div class="spinner"></div>
+            <p>正在查询数据...</p>
+          </div>
+          <div id="table-content" style="display:none"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="ai-panel" id="ai-panel">
+    <div class="ai-header">
+      <div class="ai-title">
+        <span>🤖 AI报表助手</span>
+        <span class="ai-status" id="ai-status" style="display:none">思考中...</span>
+      </div>
+      <div class="ai-header-actions">
+        <button class="btn btn-ghost btn-sm" onclick="clearAIChat()">清空</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleAIPanel()">✕</button>
+      </div>
+    </div>
+    <div class="ai-messages" id="ai-messages">
+      <div class="ai-welcome" id="ai-welcome">
+        <p>👋 你好！我可以帮你自动生成报表配置。</p>
+        <p>试试这些例子：</p>
+        <div class="quick-prompts" id="quick-prompts">
+          <button class="quick-prompt-btn" onclick="sendQuickPrompt('上月能耗分项用电分析')">上月能耗分项用电分析</button>
+          <button class="quick-prompt-btn" onclick="sendQuickPrompt('冷站各设备COP对比表')">冷站各设备COP对比表</button>
+          <button class="quick-prompt-btn" onclick="sendQuickPrompt('电力监控回路谐波分析')">电力监控回路谐波分析</button>
+          <button class="quick-prompt-btn" onclick="sendQuickPrompt('各区域空调末端室温对比')">各区域空调末端室温对比</button>
+          <button class="quick-prompt-btn" onclick="sendQuickPrompt('上月分项能耗同比分析')">上月分项能耗同比分析</button>
+        </div>
+      </div>
+    </div>
+    <div class="ai-input-area">
+      <textarea class="ai-input" id="ai-input" placeholder="描述你的报表需求，如：帮我做一个上月冷站各设备能耗同比分析表" rows="2" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAIMessage()}"></textarea>
+      <button class="btn btn-primary ai-send-btn" onclick="sendAIMessage()">发送</button>
+    </div>
+    <div class="ai-apply-bar" id="ai-apply-bar" style="display:none">
+      <button class="btn btn-success" onclick="applyAIConfig()">✅ 应用此配置到面板</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ai-apply-bar').style.display='none'">忽略</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal modal-sm" id="modal-box">
+    <div class="modal-hd"><span id="modal-title">模板管理</span><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-ft" id="modal-footer"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="drill-overlay">
+  <div class="modal" style="max-width:700px" id="drill-box">
+    <div class="modal-hd"><span>钻取明细数据</span><button class="btn btn-ghost btn-sm" onclick="closeDrillModal()">✕</button></div>
+    <div class="modal-body" id="drill-body"></div>
+    <div class="modal-ft">
+      <button class="btn btn-outline" onclick="closeDrillModal()">关闭</button>
+      <button class="btn btn-primary" onclick="exportDrillCSV()">导出CSV</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var mockCubes=[
+  {name:'energy_subitem',label:'能耗分项立方体',description:'建筑能耗分项计量数据，支持按时间、分项、支路层级、表计编号进行多维度分析',
+    dimensions:[
+      {field:'time',label:'时间',type:'date'},
+      {field:'time_year',label:'时间(年)',type:'string'},
+      {field:'time_month',label:'时间(月)',type:'string'},
+      {field:'time_day',label:'时间(日)',type:'string'},
+      {field:'time_hour',label:'时间(小时)',type:'string'},
+      {field:'subitem',label:'分项',type:'string',options:['照明插座','空调用电','动力用电','特殊用电']},
+      {field:'circuit_level',label:'支路层级',type:'string',options:['市电进线','变压器总进线','楼层配电柜','分支线路']},
+      {field:'meter_id',label:'表计编号',type:'string'},
+      {field:'building',label:'建筑',type:'string',options:['宝安中心大厦','福田CBD写字楼群','南山科技园','龙华商业广场']},
+      {field:'region',label:'区域',type:'string',options:['宝安区','福田区','南山区','龙华区']}
+    ],
+    measures:[
+      {field:'forward_active_energy',label:'正向有功电量',type:'number'},
+      {field:'max_demand',label:'最大需量',type:'number'},
+      {field:'avg_power',label:'平均功率',type:'number'},
+      {field:'peak_power',label:'峰值功率',type:'number'}
+    ],
+    aggregations:['sum','avg','max','min','diff']
+  },
+  {name:'cold_station',label:'冷站运行立方体',description:'冷站各设备运行参数，包括冷机、冷冻泵、冷却泵、冷却塔的运行数据',
+    dimensions:[
+      {field:'time',label:'时间',type:'date'},
+      {field:'time_day',label:'时间(日)',type:'string'},
+      {field:'time_hour',label:'时间(小时)',type:'string'},
+      {field:'device_id',label:'设备编号',type:'string'},
+      {field:'device_type',label:'设备类型',type:'string',options:['离心式冷机','螺杆式冷机','冷冻泵','冷却泵','冷却塔']},
+      {field:'building',label:'建筑',type:'string',options:['宝安中心大厦','福田CBD写字楼群','南山科技园']}
+    ],
+    measures:[
+      {field:'chilled_in_temp',label:'冷冻水进水温度',type:'number'},
+      {field:'chilled_out_temp',label:'冷冻水出水温度',type:'number'},
+      {field:'cooling_in_temp',label:'冷却水进水温度',type:'number'},
+      {field:'cooling_out_temp',label:'冷却水出水温度',type:'number'},
+      {field:'compressor_power',label:'压缩机功率',type:'number'},
+      {field:'cop',label:'COP',type:'number'},
+      {field:'pump_frequency',label:'泵频率',type:'number'},
+      {field:'valve_opening',label:'阀门开度',type:'number'}
+    ],
+    aggregations:['sum','avg','max','min']
+  },
+  {name:'power_monitor',label:'电力监控立方体',description:'电力监控系统数据，包含电压、电流、功率因数、谐波等',
+    dimensions:[
+      {field:'time',label:'时间',type:'date'},
+      {field:'time_hour',label:'时间(小时)',type:'string'},
+      {field:'monitor_point',label:'监控点',type:'string'},
+      {field:'circuit',label:'回路',type:'string'},
+      {field:'building',label:'建筑',type:'string',options:['宝安中心大厦','福田CBD写字楼群']},
+      {field:'voltage_level',label:'电压等级',type:'string',options:['10kV','400V']}
+    ],
+    measures:[
+      {field:'voltage_a',label:'A相电压',type:'number'},
+      {field:'voltage_b',label:'B相电压',type:'number'},
+      {field:'voltage_c',label:'C相电压',type:'number'},
+      {field:'current_a',label:'A相电流',type:'number'},
+      {field:'current_b',label:'B相电流',type:'number'},
+      {field:'current_c',label:'C相电流',type:'number'},
+      {field:'power_factor',label:'功率因数',type:'number'},
+      {field:'thd_u',label:'电压谐波THDu',type:'number'},
+      {field:'thd_i',label:'电流谐波THDi',type:'number'},
+      {field:'breaker_status',label:'断路器状态',type:'boolean'}
+    ],
+    aggregations:['avg','max','min','count']
+  },
+  {name:'ahu_terminal',label:'空调末端立方体',description:'空调末端设备运行数据，包括送风/回风温度、风量、冷量等',
+    dimensions:[
+      {field:'time',label:'时间',type:'date'},
+      {field:'time_hour',label:'时间(小时)',type:'string'},
+      {field:'terminal_id',label:'末端编号',type:'string'},
+      {field:'zone',label:'区域',type:'string',options:['办公区A','办公区B','会议室','大堂','地下停车场']},
+      {field:'floor',label:'楼层',type:'string',options:['1F','2F','3F','4F','5F','B1']},
+      {field:'building',label:'建筑',type:'string',options:['宝安中心大厦','福田CBD写字楼群']}
+    ],
+    measures:[
+      {field:'supply_air_temp',label:'送风温度',type:'number'},
+      {field:'return_air_temp',label:'回风温度',type:'number'},
+      {field:'air_volume',label:'风量',type:'number'},
+      {field:'cooling_capacity',label:'冷量',type:'number'},
+      {field:'fan_status',label:'风机状态',type:'boolean'},
+      {field:'vav_opening',label:'VAV开度',type:'number'},
+      {field:'room_temp',label:'房间温度',type:'number'},
+      {field:'room_humidity',label:'房间湿度',type:'number'}
+    ],
+    aggregations:['avg','max','min','sum','count']
+  },
+  {name:'lighting',label:'照明回路立方体',description:'照明回路监控数据，包含开关状态和累计能耗',
+    dimensions:[
+      {field:'time',label:'时间',type:'date'},
+      {field:'time_day',label:'时间(日)',type:'string'},
+      {field:'circuit_id',label:'回路编号',type:'string'},
+      {field:'zone',label:'区域',type:'string',options:['办公区A','办公区B','公共走道','卫生间','大堂','地下停车场']},
+      {field:'floor',label:'楼层',type:'string',options:['1F','2F','3F','4F','5F','B1','B2']},
+      {field:'building',label:'建筑',type:'string',options:['宝安中心大厦','福田CBD写字楼群']}
+    ],
+    measures:[
+      {field:'switch_status',label:'开关状态',type:'boolean'},
+      {field:'cumulative_energy',label:'累计能耗',type:'number'},
+      {field:'daily_energy',label:'日能耗',type:'number'},
+      {field:'run_hours',label:'运行时长',type:'number'}
+    ],
+    aggregations:['sum','avg','count']
+  }
+];
+
+function generateDateLabels(dim){
+  if(dim.includes('month')||dim.includes('月')){
+    var m=[];for(var i=1;i<=12;i++)m.push('2026-'+String(i).padStart(2,'0'));return m;
+  }
+  if(dim.includes('hour')||dim.includes('小时')){
+    var h=[];for(var i=0;i<24;i++)h.push(String(i).padStart(2,'0')+':00');return h;
+  }
+  if(dim.includes('day')||dim.includes('日')){
+    var d=[];for(var i=1;i<=30;i++)d.push('2026-06-'+String(i).padStart(2,'0'));return d;
+  }
+  if(dim.includes('year')||dim.includes('年')){
+    return['2023','2024','2025','2026'];
+  }
+  return['总计'];
+}
+
+function generateMockData(cubeName,rows,columns,values){
+  var cube=mockCubes.find(function(c){return c.name===cubeName});
+  if(!cube)return{rows:[],rowHeaders:[],colHeaders:[],data:[]};
+  var rowDim=rows[0]||'time_day';
+  var colDim=columns[0]||'subitem';
+  var measure=values[0];
+  var rowLabels=(cube.dimensions.find(function(d){return d.field===rowDim})||{}).options;
+  if(!rowLabels||rowLabels.length===0)rowLabels=generateDateLabels(rowDim);
+  var colLabels=(cube.dimensions.find(function(d){return d.field===colDim})||{}).options;
+  if(!colLabels||colLabels.length===0)colLabels=generateDateLabels(colDim);
+  var measureField=measure?measure.field:'forward_active_energy';
+  var baseValue=
+    measureField==='forward_active_energy'?1000:
+    measureField==='cop'?5.0:
+    measureField==='compressor_power'?200:
+    measureField==='cumulative_energy'?500:
+    measureField==='current_a'?150:
+    measureField==='room_temp'?25:
+    measureField==='power_factor'?0.92:50;
+  var data=rowLabels.map(function(){return colLabels.map(function(){var v=baseValue*(0.5+Math.random());return Math.round(v*100)/100})});
+  return{
+    rows:rowLabels.map(function(l){return[l]}),
+    rowHeaders:rowLabels.map(function(l){return[l]}),
+    colHeaders:colLabels.map(function(l){return[l]}),
+    data:data
+  };
+}
+
+function generateDrillData(cubeName,rowValues,colValues){
+  var count=12;var d=[];
+  for(var i=0;i<count;i++){
+    d.push({
+      time:'2026-06-15 '+String(8+i).padStart(2,'0')+':00',
+      subitem:(colValues.subitem||rowValues.subitem||'照明插座'),
+      forward_active_energy:Math.round((50+Math.random()*100)*100)/100,
+      max_demand:Math.round((100+Math.random()*50)*100)/100,
+      meter_id:'MTR-'+String(i+1).padStart(3,'0'),
+      cop:Math.round((4+Math.random()*2)*100)/100,
+      compressor_power:Math.round((150+Math.random()*100)*100)/100,
+      room_temp:Math.round((23+Math.random()*5)*100)/100,
+      cumulative_energy:Math.round((400+Math.random()*200)*100)/100,
+      current_a:Math.round((100+Math.random()*80)*100)/100
+    });
+  }
+  return d;
+}
+
+var state={
+  cubes:mockCubes,
+  selectedCubeIndex:0,
+  currentCube:mockCubes[0],
+  config:{
+    cubeName:mockCubes[0].name,
+    rows:[],columns:[],values:[],filters:[],calculatedFields:[]
+  },
+  rowItems:[],
+  columnItems:[],
+  valueItems:[],
+  filterItems:[],
+  reportData:null,
+  drillData:null,
+  loading:false,
+  showCubeSelector:false,
+  aiMessages:[],
+  aiGenerating:false,
+  aiLastResult:null,
+  aiPanelVisible:false,
+  undoStack:[],
+  redoStack:[],
+  templateMode:'save',
+  selectedTemplateId:null,
+  params:{startDate:'2026-06-01',endDate:'2026-06-30'},
+  showCalcEditor:false
+};
+
+function genId(){return'it_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)}
+
+function createZoneItem(field,cubeName){
+  var item={id:genId(),field:field,cubeName:cubeName,agg:'sum',alias:field.label};
+  if(field.field==='cop'||field.field==='room_temp'||field.field==='power_factor')item.agg='avg';
+  return item;
+}
+
+function findField(cubeName,fname){
+  var cube=mockCubes.find(function(c){return c.name===cubeName});
+  if(!cube)return null;
+  var all=cube.dimensions.concat(cube.measures);
+  return all.find(function(f){return f.field===fname})||null;
+}
+
+function syncConfig(){
+  state.config.rows=state.rowItems.map(function(i){return i.field.field});
+  state.config.columns=state.columnItems.map(function(i){return i.field.field});
+  state.config.values=state.valueItems.map(function(i){return{field:i.field.field,agg:i.agg||'sum',alias:i.alias,timeShift:i.timeShift}});
+  state.config.filters=state.filterItems.map(function(i){return{field:i.field.field,op:'eq',value:''}});
+}
+
+function saveUndo(){
+  var s=JSON.parse(JSON.stringify({rows:state.rowItems,cols:state.columnItems,vals:state.valueItems,filt:state.filterItems,cfg:state.config}));
+  state.undoStack.push(s);
+  if(state.undoStack.length>50)state.undoStack.shift();
+  state.redoStack=[];
+}
+
+function undo(){
+  if(state.undoStack.length===0)return;
+  var s=state.undoStack.pop();
+  state.redoStack.push(JSON.parse(JSON.stringify({rows:state.rowItems,cols:state.columnItems,vals:state.valueItems,filt:state.filterItems,cfg:state.config})));
+  state.rowItems=s.rows;
+  state.columnItems=s.cols;
+  state.valueItems=s.vals;
+  state.filterItems=s.filt;
+  state.config=s.cfg;
+  renderAll();
+  showToast('已撤销');
+}
+
+function redo(){
+  if(state.redoStack.length===0)return;
+  var s=state.redoStack.pop();
+  state.undoStack.push(JSON.parse(JSON.stringify({rows:state.rowItems,cols:state.columnItems,vals:state.valueItems,filt:state.filterItems,cfg:state.config})));
+  state.rowItems=s.rows;
+  state.columnItems=s.cols;
+  state.valueItems=s.vals;
+  state.filterItems=s.filt;
+  state.config=s.cfg;
+  renderAll();
+  showToast('已重做');
+}
+
+function clearAll(){
+  saveUndo();
+  state.rowItems=[];state.columnItems=[];state.valueItems=[];state.filterItems=[];
+  state.config={cubeName:state.currentCube.name,rows:[],columns:[],values:[],filters:[],calculatedFields:[]};
+  state.reportData=null;state.drillData=null;
+  renderAll();
+  showToast('已清空');
+}
+
+function addRowItem(field,cubeName){
+  if(state.rowItems.some(function(i){return i.field.field===field.field}))return;
+  saveUndo();
+  state.rowItems.push(createZoneItem(field,cubeName));
+  syncConfig();renderConfigPanel();
+}
+
+function addColumnItem(field,cubeName){
+  if(state.columnItems.some(function(i){return i.field.field===field.field}))return;
+  saveUndo();
+  state.columnItems.push(createZoneItem(field,cubeName));
+  syncConfig();renderConfigPanel();
+}
+
+function addValueItem(field,cubeName){
+  saveUndo();
+  state.valueItems.push(createZoneItem(field,cubeName));
+  syncConfig();renderConfigPanel();
+}
+
+function addFilterItem(field,cubeName){
+  if(state.filterItems.some(function(i){return i.field.field===field.field}))return;
+  saveUndo();
+  state.filterItems.push(createZoneItem(field,cubeName));
+  syncConfig();renderConfigPanel();
+}
+
+function removeRowItem(id){saveUndo();state.rowItems=state.rowItems.filter(function(i){return i.id!==id});syncConfig();renderConfigPanel()}
+function removeColumnItem(id){saveUndo();state.columnItems=state.columnItems.filter(function(i){return i.id!==id});syncConfig();renderConfigPanel()}
+function removeValueItem(id){saveUndo();state.valueItems=state.valueItems.filter(function(i){return i.id!==id});syncConfig();renderConfigPanel()}
+function removeFilterItem(id){saveUndo();state.filterItems=state.filterItems.filter(function(i){return i.id!==id});syncConfig();renderConfigPanel()}
+
+function updateValueAgg(id,agg){
+  var item=state.valueItems.find(function(i){return i.id===id});
+  if(item){item.agg=agg;syncConfig()}
+}
+
+function onDragStart(e,field,type){
+  if(!e.dataTransfer)return;
+  e.dataTransfer.effectAllowed='copy';
+  e.dataTransfer.setData('application/json',JSON.stringify({type:type,field:field,cubeName:state.currentCube.name}));
+}
+
+function onDragOver(e,zone){
+  if(!e.dataTransfer)return;
+  e.dataTransfer.dropEffect='copy';
+}
+
+function onDrop(e,zone){
+  if(!e.dataTransfer)return;
+  var raw=e.dataTransfer.getData('application/json');
+  if(!raw)return;
+  try{
+    var data=JSON.parse(raw);
+    var field=data.field,cubeName=data.cubeName;
+    if(zone==='row')addRowItem(field,cubeName);
+    else if(zone==='column')addColumnItem(field,cubeName);
+    else if(zone==='value')addValueItem(field,cubeName);
+    else if(zone==='filter')addFilterItem(field,cubeName);
+  }catch(ex){}
+}
+
+function selectCube(name){
+  var idx=mockCubes.findIndex(function(c){return c.name===name});
+  if(idx>=0){
+    state.selectedCubeIndex=idx;
+    state.currentCube=mockCubes[idx];
+    state.config.cubeName=name;
+    state.rowItems=[];state.columnItems=[];state.valueItems=[];state.filterItems=[];
+    state.config.rows=[];state.config.columns=[];state.config.values=[];state.config.filters=[];
+    state.config.calculatedFields=[];
+    state.reportData=null;state.drillData=null;
+    state.undoStack=[];state.redoStack=[];
+    state.showCubeSelector=false;
+    renderAll();
+  }
+}
+
+function toggleCubeSelector(){
+  state.showCubeSelector=!state.showCubeSelector;
+  renderCubeSelector();
+}
+
+function renderAll(){
+  renderCubeSelector();
+  renderFieldList();
+  renderConfigPanel();
+  renderTable();
+  renderAIPanel();
+}
+
+function renderCubeSelector(){
+  var el=document.getElementById('cube-selector');
+  var btn=document.getElementById('cube-select-btn');
+  btn.textContent=(state.currentCube?state.currentCube.label:'选择立方体')+' ▼';
+  if(!state.showCubeSelector){el.style.display='none';return}
+  el.style.display='block';
+  el.innerHTML=mockCubes.map(function(cube,idx){
+    var active=idx===state.selectedCubeIndex?' active':'';
+    return'<div class="cube-option'+active+'" onclick="selectCube(\''+cube.name+'\')"><div class="cube-option-title">'+cube.label+'</div><div class="cube-option-desc">'+cube.description+'</div></div>';
+  }).join('');
+}
+
+function renderFieldList(){
+  var el=document.getElementById('field-list');
+  var cube=state.currentCube;
+  if(!cube){el.innerHTML='<div class="empty-state"><p>请选择立方体</p></div>';return}
+  var dimsHtml=cube.dimensions.map(function(dim){
+    return'<div class="field-item" draggable="true" ondragstart="onDragStart(event,'+JSON.stringify(dim).replace(/"/g,'&quot;')+',\'dimension\')">'+
+      '<span class="field-icon">&#128208;</span><div class="field-info"><span class="field-label">'+dim.label+'</span><span class="field-name">'+dim.field+'</span></div>'+
+      '<span class="field-type-badge dim-badge">DIM</span>'+
+      '<button class="add-btn" onclick="event.stopPropagation();addRowItem('+JSON.stringify(dim).replace(/"/g,'&quot;')+',\''+cube.name+'\')" title="添加到行">+行</button>'+
+      '<button class="add-btn" onclick="event.stopPropagation();addColumnItem('+JSON.stringify(dim).replace(/"/g,'&quot;')+',\''+cube.name+'\')" title="添加到列">+列</button>'+
+      '<button class="add-btn" onclick="event.stopPropagation();addFilterItem('+JSON.stringify(dim).replace(/"/g,'&quot;')+',\''+cube.name+'\')" title="添加到筛选">&#128269;</button>'+
+      '</div>';
+  }).join('');
+  var measHtml=cube.measures.map(function(meas){
+    return'<div class="field-item" draggable="true" ondragstart="onDragStart(event,'+JSON.stringify(meas).replace(/"/g,'&quot;')+',\'measure\')">'+
+      '<span class="field-icon">&#128202;</span><div class="field-info"><span class="field-label">'+meas.label+'</span><span class="field-name">'+meas.field+'</span></div>'+
+      '<span class="field-type-badge meas-badge">MSR</span>'+
+      '<button class="add-btn add-btn-primary" onclick="event.stopPropagation();addValueItem('+JSON.stringify(meas).replace(/"/g,'&quot;')+',\''+cube.name+'\')" title="添加到值">+值</button>'+
+      '</div>';
+  }).join('');
+  el.innerHTML=
+    '<div class="field-section"><div class="field-section-title"><span class="badge badge-blue">维度</span><span class="count">'+cube.dimensions.length+'</span></div>'+dimsHtml+'</div>'+
+    '<div class="field-section"><div class="field-section-title"><span class="badge badge-green">度量</span><span class="count">'+cube.measures.length+'</span></div>'+measHtml+'</div>';
+}
+
+function renderConfigPanel(){
+  var badge=document.getElementById('config-cube-badge');
+  if(state.currentCube){badge.style.display='inline-flex';badge.textContent=state.currentCube.label}
+  else{badge.style.display='none'}
+  renderDropZone('zone-filter',state.filterItems,
+    function(item){return renderFilterItem(item)},
+    function(id){removeFilterItem(id)},
+    '拖拽维度到此处设置筛选条件');
+  renderDropZone('zone-col',state.columnItems,
+    function(item){return renderSimpleItem(item)},
+    function(id){removeColumnItem(id)},
+    '拖拽维度到此处作为列标签');
+  renderDropZone('zone-value',state.valueItems,
+    function(item){return renderValueItem(item)},
+    function(id){removeValueItem(id)},
+    '拖拽度量到此处作为统计值');
+  renderDropZone('zone-row',state.rowItems,
+    function(item){return renderSimpleItem(item)},
+    function(id){removeRowItem(id)},
+    '拖拽维度到此处作为行标签');
+  renderCalcSection();
+}
+
+function renderFilterItem(item){
+  return'<div class="zone-item"><span class="item-label">'+item.field.label+'</span><span class="item-field">'+item.field.field+'</span>'+
+    '<div class="filter-op"><select class="filter-select"><option value="eq">=</option><option value="between">范围</option><option value="in">包含</option></select>'+
+    '<input class="filter-input" placeholder="值"></div>'+
+    '<button class="remove-btn" onclick="removeFilterItem(\''+item.id+'\')">×</button></div>';
+}
+
+function renderSimpleItem(item){
+  return'<div class="zone-item"><span class="item-label">'+item.field.label+'</span><span class="item-field">'+item.field.field+'</span>'+
+    '<button class="remove-btn" onclick="removeRowItem(\''+item.id+'\')">×</button></div>';
+}
+
+function renderValueItem(item){
+  var aggs=[
+    {v:'sum',l:'求和'},{v:'avg',l:'平均'},{v:'max',l:'最大'},{v:'min',l:'最小'},{v:'count',l:'计数'}
+  ];
+  var opts=aggs.map(function(a){return'<option value="'+a.v+'"'+(item.agg===a.v?' selected':'')+'>'+a.l+'</option>'}).join('');
+  return'<div class="zone-item value-item"><span class="item-label">'+item.alias+'</span><span class="item-field">'+item.field.field+'</span>'+
+    '<select class="agg-select" onchange="updateValueAgg(\''+item.id+'\',this.value)">'+opts+'</select>'+
+    '<button class="remove-btn" onclick="removeValueItem(\''+item.id+'\')">×</button></div>';
+}
+
+function renderDropZone(id,items,renderFn,removeFn,placeholder){
+  var el=document.getElementById(id);
+  if(!el)return;
+  if(items.length===0){el.innerHTML='<div class="zone-placeholder">'+placeholder+'</div>';return}
+  el.innerHTML=items.map(function(item){return renderFn(item)}).join('');
+}
+
+function renderCalcSection(){
+  var section=document.getElementById('calc-section');
+  var items=document.getElementById('calc-items');
+  var cf=state.config.calculatedFields||[];
+  if(cf.length===0&&!state.showCalcEditor){section.style.display='none';return}
+  section.style.display='block';
+  document.getElementById('calc-editor').style.display=state.showCalcEditor?'flex':'none';
+  items.innerHTML=cf.map(function(f,idx){
+    return'<div class="calc-item"><span class="item-label">'+f.alias+'</span><code class="calc-formula">'+f.formula+'</code>'+
+      '<button class="remove-btn" onclick="removeCalcField('+idx+')">×</button></div>';
+  }).join('');
+}
+
+function toggleCalcEditor(){
+  state.showCalcEditor=!state.showCalcEditor;renderCalcSection()
+}
+
+function addCalcField(){
+  var alias=document.getElementById('calc-alias').value.trim();
+  var formula=document.getElementById('calc-formula').value.trim();
+  if(!alias||!formula)return;
+  state.config.calculatedFields=state.config.calculatedFields||[];
+  state.config.calculatedFields.push({alias:alias,formula:formula});
+  document.getElementById('calc-alias').value='';
+  document.getElementById('calc-formula').value='';
+  state.showCalcEditor=false;
+  renderCalcSection();
+}
+
+function removeCalcField(idx){
+  if(state.config.calculatedFields){state.config.calculatedFields.splice(idx,1)}
+  renderCalcSection();
+}
+
+function generateReport(){
+  if(state.config.rows.length===0||state.config.values.length===0){
+    showToast('请先配置行标签和值区字段');
+    return;
+  }
+  state.loading=true;renderTable();
+  setTimeout(function(){
+    var raw=generateMockData(state.config.cubeName,state.config.rows,state.config.columns,
+      state.config.values.map(function(v){return{field:v.field,agg:v.agg}}));
+    if(state.config.values.length>1){
+      state.config.values.slice(1).forEach(function(v,idx){
+        var extra=generateMockData(state.config.cubeName,state.config.rows,state.config.columns,
+          [{field:v.field,agg:v.agg}]);
+        extra.data.forEach(function(row,ri){raw.data[ri]=(raw.data[ri]||[]).concat(row)});
+        if(extra.colHeaders.length>0)raw.colHeaders=raw.colHeaders.concat(extra.colHeaders);
+      });
+    }
+    state.reportData=raw;
+    state.drillData=null;
+    state.loading=false;
+    saveUndo();
+    renderTable();
+  },200);
+}
+
+function renderTable(){
+  var empty=document.getElementById('table-empty');
+  var loading=document.getElementById('table-loading');
+  var content=document.getElementById('table-content');
+  var drillInfo=document.getElementById('drill-info');
+  var clearDrillBtn=document.getElementById('btn-clear-drill');
+  if(state.drillData){
+    drillInfo.style.display='inline';drillInfo.textContent='钻取明细 - '+state.drillData.length+' 条记录';
+    clearDrillBtn.style.display='inline-flex';
+  }else{
+    drillInfo.style.display='none';clearDrillBtn.style.display='none';
+  }
+  if(state.loading){
+    empty.style.display='none';loading.style.display='flex';content.style.display='none';return;
+  }
+  loading.style.display='none';
+  if(!state.reportData&&!state.drillData){
+    empty.style.display='flex';content.style.display='none';return;
+  }
+  empty.style.display='none';content.style.display='block';
+  if(state.drillData){
+    content.innerHTML=renderDrillTable();
+    return;
+  }
+  var rd=state.reportData;
+  if(!rd||rd.rowHeaders.length===0){
+    content.innerHTML='<div class="empty-state"><p>暂无数据</p></div>';return;
+  }
+  var flatCols=rd.colHeaders.length>0?rd.colHeaders.map(function(c){return{label:c[0]||'总计',span:1}}):[];
+  var leafCols=flatCols.map(function(c){return c.label});
+  var allVals=rd.data.flat().filter(function(v){return v!==undefined&&v!==null});
+  var maxVal=allVals.length>0?Math.max.apply(null,allVals):0;
+  var minVal=allVals.length>0?Math.min.apply(null,allVals):0;
+  var hasCols=flatCols.length>0;
+  var hasRows=rd.rowHeaders.length>0;
+  var html='<table class="data-table"><thead><tr>';
+  if(hasRows&&hasCols)html+='<th class="corner-cell">行\\列</th>';
+  else if(hasRows)html+='<th class="corner-cell" style="position:sticky;left:0;z-index:15"></th>';
+  flatCols.forEach(function(col){html+='<th class="col-header"'+'>'+col.label+'</th>'});
+  html+='</tr></thead><tbody>';
+  rd.rowHeaders.forEach(function(row,ri){
+    html+='<tr>';
+    row.forEach(function(cell){html+='<th class="row-header">'+cell+'</th>'});
+    var rowData=rd.data[ri]||[];
+    rowData.forEach(function(val,ci){
+      var cls='data-cell';
+      if(val!==undefined&&val!==null){
+        if(maxVal>0&&val>=maxVal*0.9)cls+=' cell-high';
+        else if(minVal<maxVal*0.3&&val<=minVal*1.1)cls+=' cell-low';
+      }
+      html+='<td class="'+cls+'" onclick="cellClick('+ri+','+ci+')">'+formatValue(val)+'</td>';
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  content.innerHTML=html;
+}
+
+function renderDrillTable(){
+  var dd=state.drillData;
+  if(!dd||dd.length===0)return'<div class="empty-state"><p>无明细数据</p></div>';
+  var keys=Object.keys(dd[0]);
+  var html='<table class="drill-table"><thead><tr>';
+  keys.forEach(function(k){html+='<th>'+k+'</th>'});
+  html+='</tr></thead><tbody>';
+  dd.forEach(function(row){
+    html+='<tr>';
+    keys.forEach(function(k){
+      var v=row[k];
+      html+='<td>'+(typeof v==='number'?v.toFixed(2):v)+'</td>';
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  return html;
+}
+
+function formatValue(val){
+  if(val===undefined||val===null)return'-';
+  return val.toLocaleString('zh-CN',{maximumFractionDigits:2});
+}
+
+function cellClick(ri,ci){
+  var rd=state.reportData;
+  if(!rd)return;
+  var colLabel=rd.colHeaders[ci]?rd.colHeaders[ci][0]:'';
+  var rowValues=rd.rowHeaders[ri]||[];
+  state.loading=true;renderTable();
+  setTimeout(function(){
+    state.drillData=generateDrillData(state.config.cubeName,
+      rowValues.reduce(function(acc,r,i){acc[state.config.rows[i]||'field'+i]=r;return acc},{}),
+      {subitem:colLabel});
+    state.loading=false;renderTable();
+  },200);
+}
+
+function clearDrill(){
+  state.drillData=null;renderTable();
+}
+
+function renderAIPanel(){
+  var panel=document.getElementById('ai-panel');
+  var btn=document.getElementById('btn-ai-toggle');
+  if(state.aiPanelVisible){
+    panel.classList.add('open');btn.classList.add('active');
+  }else{
+    panel.classList.remove('open');btn.classList.remove('active');
+  }
+  var msgs=document.getElementById('ai-messages');
+  var welcome=document.getElementById('ai-welcome');
+  if(state.aiMessages.length===0){
+    welcome.style.display='block';
+    msgs.querySelectorAll('.ai-msg').forEach(function(e){e.remove()});
+  }else{
+    welcome.style.display='none';
+  }
+  var statusEl=document.getElementById('ai-status');
+  statusEl.style.display=state.aiGenerating?'inline':'none';
+  var applyBar=document.getElementById('ai-apply-bar');
+  applyBar.style.display=(state.aiLastResult&&!state.aiGenerating)?'flex':'none';
+}
+
+function appendAIMessage(role,content){
+  var msgs=document.getElementById('ai-messages');
+  var welcome=document.getElementById('ai-welcome');
+  welcome.style.display='none';
+  var div=document.createElement('div');
+  div.className='ai-msg '+(role==='user'?'user':'assistant');
+  div.innerHTML='<div class="msg-role">'+(role==='user'?'你':'AI')+'</div><div class="msg-content">'+content.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')+'</div>';
+  msgs.appendChild(div);
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+function toggleAIPanel(){
+  state.aiPanelVisible=!state.aiPanelVisible;
+  renderAIPanel();
+}
+
+function clearAIChat(){
+  state.aiMessages=[];state.aiLastResult=null;
+  renderAIPanel();
+}
+
+function sendQuickPrompt(prompt){
+  if(state.aiGenerating)return;
+  state.aiLastResult=null;
+  state.aiMessages.push({role:'user',content:prompt,timestamp:Date.now()});
+  appendAIMessage('user',prompt);
+  processAI(prompt);
+}
+
+function sendAIMessage(){
+  var input=document.getElementById('ai-input');
+  var text=input.value.trim();
+  if(!text||state.aiGenerating)return;
+  input.value='';
+  state.aiLastResult=null;
+  state.aiMessages.push({role:'user',content:text,timestamp:Date.now()});
+  appendAIMessage('user',text);
+  processAI(text);
+}
+
+function processAI(prompt){
+  state.aiGenerating=true;renderAIPanel();
+  var typingDiv=document.createElement('div');
+  typingDiv.className='ai-msg assistant typing';
+  typingDiv.innerHTML='<div class="msg-role">AI</div><div class="msg-content"><span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></div>';
+  document.getElementById('ai-messages').appendChild(typingDiv);
+  var cubeMap={
+    '能耗':{cubeName:'energy_subitem',rows:['time_day'],columns:['subitem'],values:[{field:'forward_active_energy',agg:'sum',alias:'本期能耗'}],filters:[{field:'time',op:'between',value:['2026-06-01','2026-06-30']}]},
+    '冷站':{cubeName:'cold_station',rows:['device_type'],columns:[],values:[{field:'cop',agg:'avg',alias:'平均COP'},{field:'compressor_power',agg:'sum',alias:'总功率'}],filters:[]},
+    '电力':{cubeName:'power_monitor',rows:['monitor_point'],columns:[],values:[{field:'current_a',agg:'avg',alias:'平均电流'},{field:'power_factor',agg:'avg',alias:'平均功率因数'}],filters:[]},
+    '空调':{cubeName:'ahu_terminal',rows:['zone'],columns:[],values:[{field:'room_temp',agg:'avg',alias:'平均室温'},{field:'cooling_capacity',agg:'sum',alias:'总冷量'}],filters:[]},
+    '照明':{cubeName:'lighting',rows:['zone'],columns:[],values:[{field:'cumulative_energy',agg:'sum',alias:'累计能耗'}],filters:[]}
+  };
+  var cubeNames={'energy_subitem':'能耗分项立方体','cold_station':'冷站运行立方体','power_monitor':'电力监控立方体','ahu_terminal':'空调末端立方体','lighting':'照明回路立方体'};
+  var match=null;
+  Object.keys(cubeMap).forEach(function(key){if(prompt.indexOf(key)>=0)match=cubeMap[key]});
+  if(!match)match={cubeName:'energy_subitem',rows:['subitem'],columns:[],values:[{field:'forward_active_energy',agg:'sum',alias:'能耗'}],filters:[{field:'time',op:'between',value:['2026-06-01','2026-06-30']}]};
+  match=JSON.parse(JSON.stringify(match));
+  if(prompt.indexOf('同比')>=0||prompt.indexOf('去年')>=0){
+    match.values.push({field:match.values[0].field,agg:match.values[0].agg,timeShift:'1y',alias:'去年同期'});
+    match.calculatedFields=[{alias:'同比增幅',formula:'(本期-去年同期)/去年同期*100'}];
+  }
+  setTimeout(function(){
+    if(typingDiv.parentNode)typingDiv.parentNode.removeChild(typingDiv);
+    state.aiGenerating=false;
+    state.aiLastResult=match;
+    var cbLabel=cubeNames[match.cubeName]||match.cubeName;
+    var rows=match.rows.join('、');var cols=match.columns.length>0?'，列: '+match.columns.join('、'):'';
+    var vals=match.values.map(function(v){return v.alias||v.field}).join('、');
+    var calcStr=match.calculatedFields&&match.calculatedFields.length>0?'🧮 计算字段: '+match.calculatedFields.map(function(f){return f.alias}).join('、')+'':'';
+    var reply='已为您生成报表配置：\n\n📊 立方体: '+cbLabel+'\n📋 行标签: '+rows+cols+'\n📈 度量: '+vals+(calcStr?'\n'+calcStr:'')+'\n\n配置已自动填入面板，请点击"生成报表"查看结果。';
+    state.aiMessages.push({role:'assistant',content:reply,timestamp:Date.now()});
+    appendAIMessage('assistant',reply);
+    renderAIPanel();
+    var msgs=document.getElementById('ai-messages');
+    msgs.scrollTop=msgs.scrollHeight;
+  },1500);
+}
+
+function applyAIConfig(){
+  if(!state.aiLastResult)return;
+  var result=state.aiLastResult;
+  state.config.rows=[];state.config.columns=[];state.config.values=[];state.config.filters=[];
+  state.rowItems=[];state.columnItems=[];state.valueItems=[];state.filterItems=[];
+  selectCube(result.cubeName);
+  state.config.rows=result.rows||[];
+  state.config.columns=result.columns||[];
+  result.rows.forEach(function(fname){var f=findField(result.cubeName,fname);if(f)state.rowItems.push(createZoneItem(f,result.cubeName))});
+  result.columns.forEach(function(fname){var f=findField(result.cubeName,fname);if(f)state.columnItems.push(createZoneItem(f,result.cubeName))});
+  result.values.forEach(function(v){var f=findField(result.cubeName,v.field);if(f){var item=createZoneItem(f,result.cubeName);item.agg=v.agg;item.alias=v.alias||f.label;item.timeShift=v.timeShift;state.valueItems.push(item)}});
+  state.config.values=result.values;
+  state.config.filters=result.filters||[];
+  state.config.calculatedFields=result.calculatedFields||[];
+  syncConfig();
+  state.aiLastResult=null;
+  document.getElementById('ai-apply-bar').style.display='none';
+  renderAll();
+  generateReport();
+  showToast('AI配置已应用');
+}
+
+function openTemplateModal(mode){
+  state.templateMode=mode;state.selectedTemplateId=null;
+  document.getElementById('modal-overlay').classList.add('show');
+  renderTemplateModal();
+}
+
+function renderTemplateModal(){
+  document.getElementById('modal-title').textContent=state.templateMode==='save'?'保存报表模板':'加载报表模板';
+  var body=document.getElementById('modal-body');
+  var footer=document.getElementById('modal-footer');
+  if(state.templateMode==='save'){
+    var preview=JSON.stringify({cubeName:state.config.cubeName,rows:state.config.rows,columns:state.config.columns,values:state.config.values,filters:state.config.filters,calculatedFields:state.config.calculatedFields},null,2);
+    body.innerHTML=
+      '<div class="mode-tabs"><button class="mode-tab active">保存</button><button class="mode-tab" onclick="state.templateMode=\'load\';renderTemplateModal()">加载</button></div>'+
+      '<div class="form-group"><label>模板名称</label><input id="tmpl-name" class="full-input" placeholder="输入模板名称"></div>'+
+      '<div class="form-group"><label>描述</label><textarea id="tmpl-desc" class="full-input" placeholder="模板描述（可选）" rows="2"></textarea></div>'+
+      '<div class="form-group"><label>配置预览</label><pre class="config-preview">'+preview+'</pre></div>';
+    footer.innerHTML='<button class="btn btn-outline" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveTemplate()">保存</button>';
+  }else{
+    var templates=loadTemplates();
+    var listHtml=templates.length===0?'<div class="empty-state"><p>暂无保存的模板</p></div>':
+      '<div class="template-list">'+templates.map(function(tmpl){
+        var selected=tmpl.id===state.selectedTemplateId?' active':'';
+        return'<div class="template-item'+selected+'" onclick="state.selectedTemplateId=\''+tmpl.id+'\';renderTemplateModal()"><div class="template-item-title">'+tmpl.name+'</div><div class="template-item-desc">'+(tmpl.description||'无描述')+'</div><div class="template-item-meta"><span>'+new Date(tmpl.updatedAt).toLocaleString('zh-CN')+'</span><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();deleteTemplate(\''+tmpl.id+'\')">删除</button></div></div>';
+      }).join('')+'</div>';
+    body.innerHTML=
+      '<div class="mode-tabs"><button class="mode-tab" onclick="state.templateMode=\'save\';renderTemplateModal()">保存</button><button class="mode-tab active">加载</button></div>'+
+      listHtml;
+    footer.innerHTML='<button class="btn btn-outline" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="loadTemplate()"'+(state.selectedTemplateId?'':' disabled')+'>加载</button>';
+  }
+}
+
+function closeModal(){
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+
+function loadTemplates(){
+  try{var raw=localStorage.getItem('ai_report_templates');return raw?JSON.parse(raw):[]}catch(e){return[]}
+}
+
+function saveTemplates(templates){
+  localStorage.setItem('ai_report_templates',JSON.stringify(templates));
+}
+
+function saveTemplate(){
+  var name=document.getElementById('tmpl-name').value.trim();
+  if(!name){showToast('请输入模板名称');return}
+  var desc=document.getElementById('tmpl-desc').value.trim();
+  var templates=loadTemplates();
+  var now=new Date().toISOString();
+  var newTmpl={id:Date.now().toString(36)+Math.random().toString(36).slice(2,8),name:name,description:desc,config:{cubeName:state.config.cubeName,rows:state.config.rows,columns:state.config.columns,values:state.config.values,filters:state.config.filters,calculatedFields:state.config.calculatedFields},createdAt:now,updatedAt:now};
+  templates.push(newTmpl);saveTemplates(templates);
+  closeModal();showToast('模板已保存');
+}
+
+function loadTemplate(){
+  if(!state.selectedTemplateId)return;
+  var templates=loadTemplates();
+  var tmpl=templates.find(function(t){return t.id===state.selectedTemplateId});
+  if(!tmpl)return;
+  var cfg=tmpl.config;
+  selectCube(cfg.cubeName);
+  state.rowItems=[];state.columnItems=[];state.valueItems=[];state.filterItems=[];
+  (cfg.rows||[]).forEach(function(fname){var f=findField(cfg.cubeName,fname);if(f)state.rowItems.push(createZoneItem(f,cfg.cubeName))});
+  (cfg.columns||[]).forEach(function(fname){var f=findField(cfg.cubeName,fname);if(f)state.columnItems.push(createZoneItem(f,cfg.cubeName))});
+  (cfg.values||[]).forEach(function(v){var f=findField(cfg.cubeName,v.field);if(f){var item=createZoneItem(f,cfg.cubeName);item.agg=v.agg;item.alias=v.alias||f.label;item.timeShift=v.timeShift;state.valueItems.push(item)}});
+  state.config.rows=cfg.rows||[];state.config.columns=cfg.columns||[];state.config.values=cfg.values||[];state.config.filters=cfg.filters||[];state.config.calculatedFields=cfg.calculatedFields||[];
+  syncConfig();
+  closeModal();
+  renderAll();
+  generateReport();
+  showToast('模板已加载');
+}
+
+function deleteTemplate(id){
+  var templates=loadTemplates();
+  templates=templates.filter(function(t){return t.id!==id});
+  saveTemplates(templates);
+  if(state.selectedTemplateId===id)state.selectedTemplateId=null;
+  renderTemplateModal();
+}
+
+function exportCSV(){
+  if(!state.reportData){showToast('请先生成报表');return}
+  var rd=state.reportData;
+  var rows=[];
+  var header=[''];
+  rd.colHeaders.forEach(function(c){header.push(c[0]||'')});
+  rows.push(header);
+  rd.rowHeaders.forEach(function(rh,ri){
+    var row=rh.slice();
+    var rowData=rd.data[ri]||[];
+    rowData.forEach(function(v){row.push(v!==undefined?v:'')});
+    rows.push(row);
+  });
+  var csv='\uFEFF';
+  rows.forEach(function(r){csv+=r.map(function(c){var s=String(c);if(s.indexOf(',')>=0||s.indexOf('"')>=0||s.indexOf('\n')>=0)return'"'+s.replace(/"/g,'""')+'"';return s}).join(',')+'\n'});
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='report_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  showToast('CSV已导出');
+}
+
+function exportDrillCSV(){
+  if(!state.drillData||state.drillData.length===0){showToast('无钻取数据');return}
+  var keys=Object.keys(state.drillData[0]);
+  var rows=[keys];
+  state.drillData.forEach(function(row){rows.push(keys.map(function(k){return row[k]}))});
+  var csv='\uFEFF'+rows.map(function(r){return r.map(function(c){var s=String(c);if(s.indexOf(',')>=0||s.indexOf('"')>=0||s.indexOf('\n')>=0)return'"'+s.replace(/"/g,'""')+'"';return s}).join(',')}).join('\n');
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='drill_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  showToast('CSV已导出');
+}
+
+function onParamChange(){
+  var start=document.getElementById('param-start').value;
+  var end=document.getElementById('param-end').value;
+  state.params.startDate=start;state.params.endDate=end;
+  if(state.reportData)generateReport();
+}
+
+function showToast(msg,icon){
+  var toast=document.getElementById('toast');
+  toast.innerHTML=(icon||'')+' '+msg;
+  toast.classList.add('show');
+  clearTimeout(toast._timeout);
+  toast._timeout=setTimeout(function(){toast.classList.remove('show')},3000);
+}
+
+function closeDrillModal(){
+  document.getElementById('drill-overlay').classList.remove('show');
+}
+
+function init(){
+  state.currentCube=mockCubes[0];
+  state.config.cubeName=mockCubes[0].name;
+  renderAll();
+  document.getElementById('modal-overlay').addEventListener('click',function(e){if(e.target===this)closeModal()});
+  document.getElementById('drill-overlay').addEventListener('click',function(e){if(e.target===this)closeDrillModal()});
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){
+      if(document.getElementById('modal-overlay').classList.contains('show')){closeModal();return}
+      if(document.getElementById('drill-overlay').classList.contains('show')){closeDrillModal();return}
+      if(state.aiPanelVisible){toggleAIPanel();return}
+    }
+    if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undo();return}
+    if((e.ctrlKey||e.metaKey)&&e.key==='y'){e.preventDefault();redo();return}
+  });
+}
+
+document.addEventListener('DOMContentLoaded',init);
+</script>
+
+</body>
+</html>
